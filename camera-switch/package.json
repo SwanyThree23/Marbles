@@ -1,0 +1,13 @@
+{
+  "name": "km-camera-switch",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:browser": "node --test e2e/*.test.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.56.1",
+    "vitest": "3.2.4"
+  }
+}

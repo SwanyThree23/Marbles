@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>camera switch harness</title></head>
+<body>
+<!-- A host (pc1) sends camera + mic to a viewer (pc2) over real WebRTC, and the camera
+     switcher is wired to the host's real RTCRtpSender, exactly as LiveRoom wires it to the
+     mediasoup producer. ?break=replace turns replaceTrack into a no-op (the control). -->
+<video id="local" autoplay muted playsinline></video>
+<video id="remote" autoplay muted playsinline></video>
+<script type="module">
+import { createCameraSwitcher } from '/src/cameraSwitch.js';
+
+const broken = new URLSearchParams(location.search).get('break') === 'replace';
+
+// Chromium's fake_device_1 opens and draws frames locally but NEVER encodes (measured:
+// framesEncoded stays 0 even as the first track on a fresh connection; devices 0 and 2
+// encode fine). Run with device-count=3 and hide device 1, so the switcher sees two
+// cameras that can really be sent. Everything else is the browser's real mediaDevices.
+const mediaDevices = {
+  getUserMedia: (c) => navigator.mediaDevices.getUserMedia(c),
+  enumerateDevices: async () => (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.label !== 'fake_device_1'),
+  addEventListener: (...a) => navigator.mediaDevices.addEventListener(...a),
+  removeEventListener: (...a) => navigator.mediaDevices.removeEventListener(...a),
+};
+
+window.ready = (async () => {
+  const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  const pc1 = new RTCPeerConnection();
+  const pc2 = new RTCPeerConnection();
+  pc1.onicecandidate = (e) => e.candidate && pc2.addIceCandidate(e.candidate);
+  pc2.onicecandidate = (e) => e.candidate && pc1.addIceCandidate(e.candidate);
+  const remote = new MediaStream();
+  pc2.ontrack = (e) => { remote.addTrack(e.track); document.getElementById('remote').srcObject = remote; };
+
+  const vSender = pc1.addTrack(stream.getVideoTracks()[0], stream);
+  const aSender = pc1.addTrack(stream.getAudioTracks()[0], stream);
+  await pc1.setLocalDescription(await pc1.createOffer());
+  await pc2.setRemoteDescription(pc1.localDescription);
+  await pc2.setLocalDescription(await pc2.createAnswer());
+  await pc1.setRemoteDescription(pc2.localDescription);
+
+  let renegotiations = 0;
+  pc1.addEventListener('negotiationneeded', () => { renegotiations++; });
+
+  const preview = document.getElementById('local');
+  preview.srcObject = stream;
+  const sw = createCameraSwitcher({
+    mediaDevices,
+    replaceTrack: (t) => (broken ? Promise.resolve() : vSender.replaceTrack(t)),
+    onTrack: (t, { mirror }) => {
+      preview.srcObject = t ? new MediaStream([t, ...stream.getAudioTracks()]) : null;
+      preview.style.transform = mirror ? 'scaleX(-1)' : '';
+    },
+  });
+  sw.start(stream.getVideoTracks()[0]);
+  let canSwitch = null;
+  sw.watch((c) => { canSwitch = c; });
+
+  const framesDecoded = async () => {
+    let n = 0;
+    (await pc2.getStats()).forEach((r) => { if (r.type === 'inbound-rtp' && r.kind === 'video') n = r.framesDecoded || 0; });
+    return n;
+  };
+
+  window.km = {
+    sw, vSender, aSender, remote, preview,
+    framesDecoded,
+    get renegotiations() { return renegotiations; },
+    get canSwitch() { return canSwitch; },
+    senderDeviceId: () => vSender.track?.getSettings().deviceId ?? null,
+    senderState: () => vSender.track?.readyState ?? null,
+    audioState: () => aSender.track?.readyState ?? null,
+    remoteVideoState: () => remote.getVideoTracks()[0]?.readyState ?? null,
+    cameras: async () => (await mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput').map((d) => d.deviceId),
+  };
+})();
+</script>
+</body>
+</html>
