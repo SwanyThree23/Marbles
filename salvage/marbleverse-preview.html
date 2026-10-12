@@ -1,0 +1,3399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kim's Marbles — Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Lora:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0C0806;
+    --panel:#171110;
+    --panel2:#1F1714;
+    --burgundy:#800020;
+    --burgundy-l:#a30029;
+    --gold:#D4AF37;
+    --terracotta:#CC7755;
+    --cream:#F5F5DC;
+    --line:#332622;
+    --text:#F5F5DC;
+    --text-dim:#b8ada0;
+    font-family:'Barlow Condensed',sans-serif;
+  }
+  :root:not([data-theme="light"]){ }
+  :root[data-theme="light"]{
+    --bg:#F5F5DC; --panel:#fff; --panel2:#f2ede1; --text:#241a12; --text-dim:#6b5c4d; --line:#e2d8c4;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden;}
+  h1,h2,h3,.display{font-family:'Bebas Neue',sans-serif; letter-spacing:0.5px;}
+  .mono{font-family:'DM Mono',monospace;}
+  .serif{font-family:'Lora',serif;}
+
+  /* header */
+  header{
+    position:sticky; top:0; z-index:20;
+    background:linear-gradient(180deg, rgba(12,8,6,0.97), rgba(12,8,6,0.9));
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+    padding:12px 20px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand .mark{
+    width:34px; height:34px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #fff8, var(--gold) 40%, var(--burgundy) 100%);
+    box-shadow:0 0 14px rgba(212,175,55,.5);
+  }
+  .brand .name-wrap{display:flex; flex-direction:column; line-height:1;}
+  .brand .name{font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; color:var(--gold);}
+  .brand .name span{color:var(--cream);}
+  .brand .tagline{font-family:'Lora',serif; font-style:italic; font-size:11px; color:var(--text-dim); margin-top:1px;}
+  nav{display:flex; gap:4px; background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:4px; overflow-x:auto; max-width:100%;}
+  nav::-webkit-scrollbar{display:none;}
+  nav button{
+    background:none; border:none; color:var(--text-dim); font-family:'Barlow Condensed'; font-weight:600;
+    font-size:15px; padding:8px 16px; border-radius:999px; cursor:pointer; transition:.2s;
+  }
+  nav button.active{background:var(--burgundy); color:var(--cream);}
+  nav button:hover:not(.active){color:var(--gold);}
+  .go-live{
+    background:linear-gradient(135deg, var(--burgundy), var(--burgundy-l));
+    color:var(--cream); border:1px solid var(--gold); border-radius:999px;
+    padding:9px 18px; font-family:'Barlow Condensed'; font-weight:700; font-size:14px;
+    cursor:pointer; display:flex; align-items:center; gap:6px; letter-spacing:.5px;
+  }
+  .go-live::before{content:''; width:7px; height:7px; border-radius:50%; background:#ff4444; box-shadow:0 0 8px #ff4444;}
+
+  main{max-width:1200px; margin:0 auto; padding:24px 20px 60px;}
+  .view{display:none;}
+  .view.active{display:block; animation:fade .3s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+  .page-head{display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:20px; flex-wrap:wrap; gap:12px;}
+  .page-head h1{font-size:40px; color:var(--cream);}
+  .page-head p{color:var(--text-dim); font-size:15px; margin-top:2px;}
+  .tag{
+    display:inline-block; font-family:'DM Mono'; font-size:11px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--gold); border:1px solid var(--gold); border-radius:4px; padding:2px 8px; margin-bottom:8px;
+  }
+
+  /* filter bar */
+  .filters{display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap;}
+  .chip{
+    background:var(--panel); border:1px solid var(--line); color:var(--text-dim);
+    padding:7px 14px; border-radius:999px; font-size:14px; cursor:pointer; font-weight:600;
+  }
+  .chip.on{background:var(--terracotta); color:#1a0f08; border-color:var(--terracotta);}
+
+  /* marketplace grid */
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:16px;}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden;
+    transition:.2s; cursor:pointer;
+  }
+  .card:hover{border-color:var(--gold); transform:translateY(-2px);}
+  .card .thumb{
+    height:150px; display:flex; align-items:center; justify-content:center; font-size:52px;
+    position:relative;
+  }
+  .card .thumb .badge{
+    position:absolute; top:8px; left:8px; font-family:'DM Mono'; font-size:10px; text-transform:uppercase;
+    background:rgba(0,0,0,.55); color:var(--gold); padding:3px 7px; border-radius:5px; letter-spacing:.5px;
+  }
+  .card .thumb .badge.trade{color:var(--terracotta);}
+  .card .body{padding:12px 14px 14px;}
+  .card .title{font-weight:600; font-size:16px; margin-bottom:3px;}
+  .card .meta{color:var(--text-dim); font-size:13px; margin-bottom:8px;}
+  .card .row{display:flex; justify-content:space-between; align-items:center;}
+  .price{font-family:'DM Mono'; color:var(--gold); font-weight:500; font-size:15px;}
+  .seller{display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text-dim);}
+  .seller .dot{width:6px; height:6px; border-radius:50%; background:#4ade80;}
+
+  /* panels view */
+  .panel-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px;}
+  .panel-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden;}
+  .panel-video{
+    height:150px; background:linear-gradient(135deg,#241a12,#3a241a);
+    display:flex; align-items:center; justify-content:center; position:relative;
+  }
+  .panel-video .live-pill{
+    position:absolute; top:8px; left:8px; background:#e0273c; color:#fff; font-size:10px; font-weight:700;
+    padding:3px 8px; border-radius:4px; letter-spacing:.5px; display:flex; align-items:center; gap:4px;
+  }
+  .panel-video .live-pill::before{content:''; width:5px; height:5px; border-radius:50%; background:#fff;}
+  .panel-video .viewers{position:absolute; bottom:8px; right:8px; font-family:'DM Mono'; font-size:11px; background:rgba(0,0,0,.5); padding:3px 7px; border-radius:5px;}
+  .panel-guests{display:flex; gap:6px; position:absolute; bottom:8px; left:8px;}
+  .avatar{width:26px; height:26px; border-radius:50%; border:2px solid var(--bg); display:flex; align-items:center; justify-content:center; font-size:13px;}
+  .panel-info{padding:12px 14px;}
+  .panel-info .title{font-weight:600; margin-bottom:2px;}
+  .panel-info .desc{color:var(--text-dim); font-size:13px;}
+  .join-btn{
+    width:100%; margin-top:10px; background:var(--panel2); border:1px solid var(--gold); color:var(--gold);
+    padding:8px; border-radius:8px; font-weight:700; cursor:pointer; font-family:'Barlow Condensed'; font-size:14px;
+  }
+  .join-btn:hover{background:var(--gold); color:#1a0f08;}
+
+  /* PK Battle */
+  .arena{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:20px;
+    margin-bottom:20px;
+  }
+  .arena-top{display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:14px;}
+  .arena-top .vs{font-family:'Bebas Neue'; font-size:30px; color:var(--gold);}
+  .fighter{flex:1; text-align:center;}
+  .fighter .name{font-weight:700; font-size:17px;}
+  .fighter .score{font-family:'DM Mono'; font-size:24px; margin-top:2px;}
+  .fighter.a .score{color:var(--terracotta);}
+  .fighter.b .score{color:var(--burgundy-l);}
+  .meter{height:14px; border-radius:999px; background:var(--panel2); overflow:hidden; display:flex; border:1px solid var(--line);}
+  .meter .a{background:linear-gradient(90deg,var(--terracotta),#e0997a);}
+  .meter .b{background:linear-gradient(90deg,var(--burgundy-l),var(--burgundy));}
+  .timer{text-align:center; font-family:'DM Mono'; color:var(--text-dim); margin:10px 0; font-size:13px;}
+  .gift-row{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:14px;}
+  .gift{
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:8px 12px;
+    cursor:pointer; font-size:13px; text-align:center; transition:.15s;
+  }
+  .gift:hover{border-color:var(--gold); transform:scale(1.05);}
+  .gift .ic{font-size:20px;}
+
+  .battle-list{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px;}
+  .mini-battle{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px;}
+  .mini-battle .row{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .mini-battle .names{font-size:14px; font-weight:600;}
+  .mini-meter{height:8px; border-radius:999px; background:var(--panel2); overflow:hidden; display:flex; margin-bottom:6px;}
+
+  /* toast */
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--panel2); border:1px solid var(--gold); color:var(--cream); padding:10px 18px;
+    border-radius:10px; font-size:14px; opacity:0; transition:.25s; z-index:50; pointer-events:none;
+    font-family:'Barlow Condensed'; font-weight:600;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  footer{text-align:center; color:var(--text-dim); font-size:12px; padding:20px; font-family:'DM Mono';}
+
+  /* share button on cards */
+  .share-btn{
+    position:absolute; top:8px; right:8px; width:26px; height:26px; border-radius:50%;
+    background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.15); color:var(--cream);
+    display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; z-index:2;
+  }
+  .share-btn:hover{background:var(--gold); color:#1a0f08; border-color:var(--gold);}
+
+  /* share modal */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(3px);
+    display:none; align-items:center; justify-content:center; z-index:60;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-box{
+    background:var(--panel); border:1px solid var(--gold); border-radius:16px; padding:22px;
+    width:320px; max-width:90vw;
+  }
+  .modal-box h3{font-size:22px; color:var(--cream); margin-bottom:4px;}
+  .modal-box .sub{color:var(--text-dim); font-size:13px; margin-bottom:16px;}
+  .share-options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px;}
+  .share-opt{
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:10px 4px;
+    text-align:center; cursor:pointer; font-size:20px; transition:.15s;
+  }
+  .share-opt:hover{border-color:var(--gold); transform:translateY(-2px);}
+  .share-opt .lbl{font-size:10px; color:var(--text-dim); margin-top:4px; font-family:'DM Mono';}
+  .copy-row{display:flex; gap:8px;}
+  .copy-row input{
+    flex:1; background:var(--bg); border:1px solid var(--line); color:var(--text-dim);
+    border-radius:8px; padding:8px 10px; font-family:'DM Mono'; font-size:12px;
+  }
+  .copy-row button{
+    background:var(--terracotta); border:none; color:#1a0f08; font-weight:700; border-radius:8px;
+    padding:0 14px; cursor:pointer; font-family:'Barlow Condensed';
+  }
+  .modal-close{
+    display:block; margin:14px auto 0; background:none; border:none; color:var(--text-dim);
+    cursor:pointer; font-size:13px; text-decoration:underline;
+  }
+
+  /* language chat widget */
+  .chat-bubble{
+    position:fixed; bottom:22px; right:22px; width:56px; height:56px; border-radius:50%;
+    background:linear-gradient(135deg, var(--burgundy), var(--burgundy-l)); border:2px solid var(--gold);
+    display:flex; align-items:center; justify-content:center; font-size:24px; cursor:pointer;
+    box-shadow:0 4px 18px rgba(0,0,0,.4); z-index:55;
+  }
+  .chat-bubble .unread{
+    position:absolute; top:-4px; right:-4px; background:#e0273c; color:#fff; font-size:10px;
+    width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:'DM Mono'; border:2px solid var(--bg);
+  }
+  .chat-drawer{
+    position:fixed; bottom:22px; right:22px; width:320px; max-width:88vw; height:440px;
+    background:var(--panel); border:1px solid var(--gold); border-radius:16px; z-index:56;
+    display:none; flex-direction:column; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  .chat-drawer.show{display:flex;}
+  .chat-head{
+    padding:12px 14px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;
+    background:var(--panel2);
+  }
+  .chat-head .t{font-weight:700; font-size:15px;}
+  .chat-head .t small{display:block; color:var(--text-dim); font-size:11px; font-weight:400;}
+  .chat-head button{background:none; border:none; color:var(--text-dim); font-size:18px; cursor:pointer;}
+  .lang-row{padding:8px 10px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:6px;}
+  .lang-row label{font-size:11px; color:var(--text-dim); font-family:'DM Mono';}
+  .lang-row select{
+    flex:1; background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:6px;
+    padding:5px 6px; font-size:12px; font-family:'Barlow Condensed';
+  }
+  .chat-body{flex:1; overflow-y:auto; padding:10px 12px; display:flex; flex-direction:column; gap:10px;}
+  .msg{max-width:88%;}
+  .msg .who{font-size:11px; color:var(--gold); font-weight:700; margin-bottom:2px; display:flex; gap:5px; align-items:center;}
+  .msg .who .flag{font-size:12px;}
+  .msg .bubble{
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:7px 10px; font-size:13.5px;
+  }
+  .msg .orig{font-size:10.5px; color:var(--text-dim); margin-top:3px; font-style:italic; font-family:'Lora';}
+  .chat-input{display:flex; gap:6px; padding:10px; border-top:1px solid var(--line);}
+  .chat-input input{
+    flex:1; background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:20px;
+    padding:8px 14px; font-size:13px;
+  }
+  .chat-input button{
+    background:var(--gold); border:none; color:#1a0f08; width:36px; height:36px; border-radius:50%;
+    cursor:pointer; font-size:15px; font-weight:700;
+  }
+
+  /* SwanyBot welcome */
+  .bot-modal .modal-box{width:380px;}
+  .bot-head{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
+  .bot-avatar{
+    width:46px; height:46px; border-radius:50%; flex-shrink:0;
+    background:radial-gradient(circle at 35% 30%, #fff9, var(--gold) 45%, var(--burgundy) 100%);
+    display:flex; align-items:center; justify-content:center; font-size:22px;
+    box-shadow:0 0 16px rgba(212,175,55,.5); border:1px solid var(--gold);
+  }
+  .bot-head h3{margin:0; font-size:22px; color:var(--cream);}
+  .bot-head .sub{color:var(--gold); font-size:12px; font-family:'DM Mono'; letter-spacing:.5px;}
+  .bot-body p{color:var(--text-dim); font-size:14px; margin-bottom:12px; font-family:'Lora'; font-style:italic;}
+  .bot-list{list-style:none; margin-bottom:14px;}
+  .bot-list li{
+    display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--line); font-size:13.5px;
+  }
+  .bot-list li:last-child{border-bottom:none;}
+  .bot-list .ic{font-size:18px; flex-shrink:0;}
+  .bot-list .lbl2{font-weight:700; color:var(--cream);}
+  .bot-list .d{color:var(--text-dim); display:block; font-size:12.5px;}
+  .bot-tip{
+    background:var(--panel2); border:1px dashed var(--gold); border-radius:10px; padding:10px 12px;
+    font-size:12.5px; color:var(--text-dim); margin-bottom:14px; font-family:'DM Mono';
+  }
+  .bot-tip b{color:var(--gold);}
+  .bot-cta{
+    width:100%; background:linear-gradient(135deg, var(--burgundy), var(--burgundy-l)); border:1px solid var(--gold);
+    color:var(--cream); padding:11px; border-radius:10px; font-weight:700; cursor:pointer;
+    font-family:'Barlow Condensed'; font-size:15px;
+  }
+  .bot-speak-btn{
+    width:100%; background:var(--panel2); border:1px solid var(--gold); color:var(--gold);
+    padding:10px; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Barlow Condensed';
+    font-size:14px; margin-bottom:12px; display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .bot-speak-btn.speaking{background:var(--gold); color:#1a0f08;}
+  .bot-mute-row{
+    display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-dim); margin-bottom:12px;
+    cursor:pointer; font-family:'DM Mono';
+  }
+  .bot-mute-row input{accent-color:var(--gold); width:13px; height:13px;}
+  .bot-body [data-speak]{transition:background .2s, box-shadow .2s; border-radius:8px;}
+  .bot-body li[data-speak].speaking, .bot-tip[data-speak].speaking{
+    background:rgba(212,175,55,.12); box-shadow:0 0 0 1px var(--gold) inset;
+  }
+  .bot-body p[data-speak].speaking{color:var(--gold);}
+  .msg.bot .bubble{border-color:var(--gold); background:rgba(212,175,55,.08);}
+  .msg.bot .who{color:var(--terracotta);}
+  .bot-fab{
+    position:fixed; bottom:22px; left:22px; background:var(--panel); border:1px solid var(--gold);
+    color:var(--gold); border-radius:999px; padding:9px 14px; font-size:13px; font-weight:700;
+    display:flex; align-items:center; gap:7px; cursor:pointer; z-index:55; box-shadow:0 4px 14px rgba(0,0,0,.4);
+  }
+  .bot-fab:hover{background:var(--gold); color:#1a0f08;}
+
+  /* panel card upgrades */
+  .panel-card{position:relative;}
+  .panel-info .cat{
+    display:inline-block; font-family:'DM Mono'; font-size:10px; text-transform:uppercase; letter-spacing:.5px;
+    color:var(--terracotta); border:1px solid var(--terracotta); border-radius:4px; padding:1px 6px; margin-bottom:6px;
+  }
+  .panel-info .host-row{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim); margin-top:6px;}
+  .panel-info .cap{margin-left:auto; font-family:'DM Mono';}
+  .upcoming-pill{background:var(--panel2); color:var(--gold); border:1px solid var(--gold);}
+  .upcoming-pill::before{background:var(--gold);}
+
+  /* BROADCAST SETUP MODAL */
+  .setup-box{width:360px;}
+  .setup-box h3{font-size:24px; color:var(--cream); margin-bottom:4px;}
+  .setup-preview{
+    height:160px; border-radius:12px; margin:12px 0; background:linear-gradient(135deg,#241a12,#3a241a);
+    display:flex; align-items:center; justify-content:center; font-size:44px; border:1px dashed var(--line); position:relative;
+    overflow:hidden;
+  }
+  #setupFallback{display:flex; flex-direction:column; align-items:center; gap:6px;}
+  .perm-btn{
+    background:var(--gold); color:#1a0f08; border:none; border-radius:8px; padding:6px 12px; font-size:12px;
+    font-weight:700; cursor:pointer; font-family:'Barlow Condensed'; margin-top:4px;
+  }
+  .perm-msg{font-size:11px; color:var(--text-dim); font-family:'DM Mono'; text-align:center; max-width:260px; padding:0 10px;}
+  .setup-preview .rec{position:absolute; top:8px; left:8px; font-family:'DM Mono'; font-size:10px; color:var(--text-dim);}
+  .field-lbl{font-size:11px; color:var(--text-dim); font-family:'DM Mono'; text-transform:uppercase; letter-spacing:.5px; margin:10px 0 5px;}
+  .setup-box input[type=text], .setup-box select{
+    width:100%; background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:8px;
+    padding:9px 12px; font-size:14px; font-family:'Barlow Condensed';
+  }
+  .platform-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .platform-chip{
+    background:var(--panel2); border:1px solid var(--line); color:var(--text-dim); border-radius:999px;
+    padding:6px 12px; font-size:12.5px; cursor:pointer; display:flex; align-items:center; gap:5px;
+  }
+  .platform-chip.on{background:var(--terracotta); color:#1a0f08; border-color:var(--terracotta); font-weight:700;}
+  .start-btn{
+    width:100%; margin-top:16px; background:linear-gradient(135deg, var(--burgundy), var(--burgundy-l));
+    border:1px solid var(--gold); color:var(--cream); padding:12px; border-radius:10px; font-weight:700;
+    cursor:pointer; font-family:'Barlow Condensed'; font-size:16px; display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .start-btn::before{content:''; width:8px; height:8px; border-radius:50%; background:#ff4444; box-shadow:0 0 8px #ff4444;}
+
+  /* LIVE ROOM (panels + broadcast) */
+  .live-room{
+    position:fixed; inset:0; background:var(--bg); z-index:70; display:none; flex-direction:column;
+  }
+  .live-room.show{display:flex;}
+  .lr-header{
+    display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line);
+    background:var(--panel);
+  }
+  .lr-header .live-pill{position:static;}
+  .lr-title{font-weight:700; font-size:16px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .lr-viewers{font-family:'DM Mono'; font-size:12px; color:var(--text-dim); display:flex; align-items:center; gap:4px;}
+  .lr-close{background:var(--panel2); border:1px solid var(--line); color:var(--text); width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:15px;}
+  .lr-body{flex:1; display:flex; min-height:0;}
+  .lr-stage{flex:1; padding:16px; display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; align-content:start; overflow-y:auto; position:relative;}
+  .lr-tile{
+    aspect-ratio:4/3; border-radius:12px; background:linear-gradient(135deg,#241a12,#3a241a); border:1px solid var(--line);
+    position:relative; display:flex; align-items:center; justify-content:center; font-size:36px; overflow:hidden;
+    animation:tilein .3s ease;
+  }
+  @keyframes tilein{from{opacity:0; transform:scale(.9);} to{opacity:1; transform:none;}}
+  .lr-tile.host{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset;}
+  .lr-tile .tag{position:absolute; bottom:6px; left:6px; background:rgba(0,0,0,.6); font-size:11px; padding:2px 7px; border-radius:5px; font-weight:600;}
+  .lr-tile .mstat{position:absolute; bottom:6px; right:6px; width:22px; height:22px; border-radius:50%; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; font-size:11px;}
+  .lr-tile .mstat.off{background:#e0273c;}
+  .lr-sidebar{
+    width:280px; border-left:1px solid var(--line); background:var(--panel); display:flex; flex-direction:column;
+  }
+  .lr-sidebar .chat-body{flex:1;}
+  .lr-controls{
+    display:flex; align-items:center; justify-content:center; gap:10px; padding:14px; border-top:1px solid var(--line);
+    background:var(--panel); flex-wrap:wrap;
+  }
+  .lr-btn{
+    width:46px; height:46px; border-radius:50%; background:var(--panel2); border:1px solid var(--line);
+    color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .lr-btn.off{background:#e0273c; border-color:#e0273c; color:#fff;}
+  .lr-btn.leave{background:#e0273c; border-color:#e0273c; color:#fff; width:auto; padding:0 20px; border-radius:23px; font-family:'Barlow Condensed'; font-weight:700; font-size:14px; gap:6px;}
+  .lr-btn.host-only{border-color:var(--gold); color:var(--gold);}
+  .cam-select{
+    background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:20px; padding:0 12px;
+    height:46px; font-size:13px; font-family:'Barlow Condensed';
+  }
+  .float-react{
+    position:absolute; font-size:26px; pointer-events:none; animation:floatup 1.6s ease-out forwards;
+  }
+  @keyframes floatup{
+    0%{opacity:1; transform:translateY(0) scale(1);}
+    100%{opacity:0; transform:translateY(-140px) scale(1.4);}
+  }
+  @media (max-width:760px){
+    .lr-sidebar{display:none;}
+  }
+  .lr-tile.sharing{border-color:var(--terracotta); box-shadow:0 0 0 1px var(--terracotta) inset;}
+  .tile-host-ctrls{
+    position:absolute; top:6px; right:6px; display:flex; gap:4px; z-index:3;
+  }
+  .tile-host-ctrls button{
+    width:22px; height:22px; border-radius:6px; background:rgba(0,0,0,.6); border:1px solid rgba(255,255,255,.2);
+    color:#fff; font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .tile-host-ctrls button.active{background:#e0273c; border-color:#e0273c;}
+  .tile-host-ctrls button:hover{background:var(--gold); color:#1a0f08;}
+  #lrStage.spotlight{grid-template-columns:1fr; grid-auto-rows:auto;}
+  #lrStage.spotlight .lr-tile:first-child{grid-column:1; aspect-ratio:16/9;}
+  #lrStage.spotlight .lr-tile:not(:first-child){max-width:140px; aspect-ratio:4/3; justify-self:start;}
+  .tile-screen-btn{
+    position:absolute; top:6px; left:6px; width:24px; height:24px; border-radius:6px; background:rgba(0,0,0,.6);
+    border:1px solid rgba(255,255,255,.2); color:#fff; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:2;
+  }
+  .tile-screen-btn:hover{background:var(--gold); color:#1a0f08;}
+  .lr-btn.active{border-color:var(--terracotta); color:var(--terracotta); background:rgba(204,119,85,.18);}
+  .screen-tag{
+    display:none; position:absolute; top:6px; right:6px; background:var(--terracotta); color:#1a0f08; font-size:9px;
+    font-weight:700; padding:2px 6px; border-radius:5px; font-family:'DM Mono'; letter-spacing:.5px; z-index:2;
+  }
+
+  /* watch party */
+  .wp-panel{display:none; flex:1; flex-direction:column; padding:16px; overflow-y:auto; gap:14px;}
+  .wp-panel.show{display:flex;}
+  .wp-player-wrap{
+    width:100%; aspect-ratio:16/9; background:#000; border-radius:12px; overflow:hidden; border:1px solid var(--line); position:relative;
+  }
+  .wp-player-wrap iframe{width:100%; height:100%; border:none;}
+  .wp-empty{
+    width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    color:var(--text-dim); font-size:13px;
+  }
+  .wp-now{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;}
+  .wp-now .np{font-weight:700; font-size:14px;}
+  .wp-now .np small{display:block; color:var(--text-dim); font-weight:400; font-size:11px; font-family:'DM Mono';}
+  .wp-sync{font-family:'DM Mono'; font-size:11px; color:var(--gold); display:flex; align-items:center; gap:5px;}
+  .wp-sync::before{content:''; width:6px; height:6px; border-radius:50%; background:var(--gold); box-shadow:0 0 6px var(--gold);}
+  .wp-controls-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .wp-btn{
+    background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:8px 14px;
+    cursor:pointer; font-size:13px; font-weight:600; font-family:'Barlow Condensed';
+  }
+  .wp-btn:hover{border-color:var(--gold);}
+  .wp-load-row{display:flex; gap:8px;}
+  .wp-load-row input{
+    flex:1; background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:8px;
+    padding:9px 12px; font-size:13.5px; font-family:'Barlow Condensed';
+  }
+  .wp-load-row button{
+    background:var(--terracotta); border:none; color:#1a0f08; font-weight:700; border-radius:8px; padding:0 16px; cursor:pointer;
+    font-family:'Barlow Condensed'; font-size:13.5px;
+  }
+  .wp-queue-head{font-weight:700; font-size:14px; margin-top:4px;}
+  .wp-queue-item{
+    display:flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--line); border-radius:9px;
+    padding:8px 10px; font-size:13px;
+  }
+  .wp-queue-item .qt{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .wp-queue-item .qv{font-family:'DM Mono'; color:var(--gold); font-size:12px; cursor:pointer;}
+  .wp-queue-item .qa{display:flex; gap:6px;}
+  .wp-queue-item button{background:var(--panel2); border:1px solid var(--line); color:var(--text-dim); border-radius:6px; padding:4px 8px; cursor:pointer; font-size:11px;}
+  .wp-note{font-size:11px; color:var(--text-dim); font-family:'DM Mono'; text-align:center;}
+
+  /* profile / me */
+  .me-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px;
+    display:flex; gap:16px; margin-bottom:18px; flex-wrap:wrap;
+  }
+  .me-avatar{
+    width:76px; height:76px; border-radius:50%; flex-shrink:0;
+    background:radial-gradient(circle at 35% 30%,#fff9,var(--gold) 45%,var(--burgundy) 100%);
+    display:flex; align-items:center; justify-content:center; font-size:34px; border:1px solid var(--gold);
+  }
+  .me-fields{flex:1; min-width:200px; display:flex; flex-direction:column; gap:8px;}
+  .me-input-name{
+    background:var(--bg); border:1px solid var(--line); color:var(--cream); border-radius:8px; padding:9px 12px;
+    font-family:'Bebas Neue'; font-size:18px; letter-spacing:.5px;
+  }
+  .me-input-bio{
+    background:var(--bg); border:1px solid var(--line); color:var(--text-dim); border-radius:8px; padding:9px 12px;
+    font-size:13px; font-family:'Lora'; font-style:italic; resize:none; height:56px;
+  }
+  .settings-row{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:20px;}
+  .settings-card{
+    flex:1; min-width:220px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px;
+  }
+  .sc-label{font-family:'DM Mono'; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--text-dim); margin-bottom:10px;}
+  .theme-toggle{display:flex; gap:8px;}
+  .theme-toggle button{
+    flex:1; padding:9px; border-radius:8px; background:var(--panel2); border:1px solid var(--line); color:var(--text-dim);
+    cursor:pointer; font-family:'Barlow Condensed'; font-weight:600; font-size:13.5px;
+  }
+  .theme-toggle button.on{background:var(--gold); color:#1a0f08; border-color:var(--gold);}
+  .switch-row{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-dim); margin-bottom:9px; cursor:pointer;}
+  .switch-row input{accent-color:var(--gold); width:15px; height:15px;}
+  .badge-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px;}
+  .badge-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 10px; text-align:center;
+    opacity:.4; filter:grayscale(1);
+  }
+  .badge-card.unlocked{opacity:1; filter:none; border-color:var(--gold);}
+  .badge-card .bi{font-size:30px; margin-bottom:6px;}
+  .badge-card .bn{font-weight:700; font-size:12.5px;}
+  .badge-card .bd{font-size:10.5px; color:var(--text-dim); margin-top:3px; font-family:'DM Mono';}
+
+  /* community feed */
+  .composer{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:18px;}
+  .composer textarea{
+    width:100%; background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:10px;
+    padding:11px 13px; font-size:14px; font-family:'Barlow Condensed'; resize:none; height:64px;
+  }
+  .composer-row{display:flex; gap:8px; margin-top:8px; align-items:center;}
+  .composer-row select{
+    flex:1; background:var(--panel2); border:1px solid var(--line); color:var(--text-dim); border-radius:8px;
+    padding:8px 10px; font-size:12.5px; font-family:'Barlow Condensed';
+  }
+  .post-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px;}
+  .post-head{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+  .post-avatar{
+    width:38px; height:38px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff9,var(--terracotta) 45%,var(--burgundy) 100%);
+    display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; cursor:pointer;
+  }
+  .post-head .pn{font-weight:700; font-size:14px; cursor:pointer;}
+  .post-head .pt{color:var(--text-dim); font-size:11px; font-family:'DM Mono';}
+  .post-text{font-size:14px; line-height:1.5; margin-bottom:10px; font-family:'Lora';}
+  .post-attach{
+    display:flex; align-items:center; gap:10px; background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:9px 12px; margin-bottom:10px;
+  }
+  .post-attach .ic{font-size:24px;}
+  .post-attach .nm{font-weight:600; font-size:13px;}
+  .post-actions{display:flex; gap:16px;}
+  .post-actions button{
+    background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:13px; display:flex; align-items:center; gap:5px;
+    font-family:'Barlow Condensed'; font-weight:600;
+  }
+  .post-actions button:hover{color:var(--gold);}
+  .post-actions button.liked{color:var(--terracotta);}
+
+  /* report */
+  .report-btn{
+    position:absolute; top:8px; right:40px; width:26px; height:26px; border-radius:50%;
+    background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.15); color:var(--cream);
+    display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; z-index:2;
+  }
+  .report-btn:hover{background:#e0273c; border-color:#e0273c; color:#fff;}
+  .report-reasons{display:flex; flex-direction:column; gap:8px; margin-bottom:12px;}
+  .report-reasons label{
+    display:flex; align-items:center; gap:8px; background:var(--panel2); border:1px solid var(--line); border-radius:9px;
+    padding:9px 12px; font-size:13.5px; cursor:pointer;
+  }
+  .report-reasons input{accent-color:var(--gold);}
+  .report-submit{
+    width:100%; background:#e0273c; border:1px solid #ff5555; color:#fff; padding:11px; border-radius:10px;
+    font-weight:700; cursor:pointer; font-family:'Barlow Condensed'; font-size:15px;
+  }
+
+  /* my listings */
+  .mylisting-row{
+    display:flex; align-items:center; gap:12px; background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:10px 12px; margin-bottom:10px;
+  }
+  .mylisting-row .mi{font-size:26px;}
+  .mylisting-row .mn{font-weight:700; font-size:14px; flex:1;}
+  .mylisting-row .mp{font-family:'DM Mono'; color:var(--gold); font-size:12.5px;}
+  .mylisting-row button{
+    background:var(--panel2); border:1px solid var(--line); color:var(--text-dim); border-radius:7px;
+    padding:6px 10px; font-size:11.5px; cursor:pointer; font-family:'Barlow Condensed'; font-weight:600;
+  }
+  .mylisting-row button:hover{border-color:#e0273c; color:#e0273c;}
+
+  /* leaderboard */
+  .leaderboard-box{
+    width:230px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px;
+    flex-shrink:0;
+  }
+  .leaderboard-box h3{font-family:'Bebas Neue'; font-size:19px; color:var(--gold); margin-bottom:10px; letter-spacing:.5px;}
+  .lb-row{display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
+  .lb-row:last-child{border-bottom:none;}
+  .lb-rank{font-family:'DM Mono'; color:var(--text-dim); width:16px;}
+  .lb-name{flex:1; font-weight:600;}
+  .lb-pts{font-family:'DM Mono'; color:var(--gold); font-size:12px;}
+
+  /* grade + type badges on market cards */
+  .card .thumb .grade{
+    position:absolute; top:8px; right:8px; font-family:'DM Mono'; font-size:9px; text-transform:uppercase;
+    padding:3px 6px; border-radius:5px; font-weight:700; letter-spacing:.5px;
+  }
+  .grade.mint{background:var(--gold); color:#1a0f08;}
+  .grade.near-mint{background:var(--terracotta); color:#1a0f08;}
+  .grade.good{background:var(--panel2); color:var(--text-dim); border:1px solid var(--line);}
+  .card .type-tag{
+    display:inline-block; font-family:'DM Mono'; font-size:10px; color:var(--text-dim); margin-bottom:4px;
+  }
+  .add-col-btn{
+    width:100%; margin-top:8px; background:var(--panel2); border:1px solid var(--line); color:var(--text-dim);
+    padding:6px; border-radius:7px; font-size:12.5px; cursor:pointer; font-family:'Barlow Condensed'; font-weight:600;
+  }
+  .add-col-btn:hover{border-color:var(--gold); color:var(--gold);}
+  .add-col-btn.added{background:var(--gold); color:#1a0f08; border-color:var(--gold);}
+
+  /* auction elements */
+  .card.auction .thumb .badge{color:var(--gold); border-color:var(--gold);}
+  .auction-timer{
+    font-family:'DM Mono'; font-size:11px; color:#e0273c; display:flex; align-items:center; gap:4px; margin-bottom:6px;
+  }
+  .bid-btn{
+    width:100%; margin-top:6px; background:linear-gradient(135deg,var(--burgundy),var(--burgundy-l)); border:1px solid var(--gold);
+    color:var(--cream); padding:8px; border-radius:8px; font-weight:700; cursor:pointer; font-family:'Barlow Condensed'; font-size:13.5px;
+  }
+
+  /* collection page */
+  .collection-summary{display:flex; gap:14px; margin-bottom:20px; flex-wrap:wrap;}
+  .collection-summary > div{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 22px;
+    display:flex; flex-direction:column; min-width:120px;
+  }
+  .collection-summary .num{font-family:'Bebas Neue'; font-size:30px; color:var(--gold);}
+  .collection-summary .lbl{font-size:12px; color:var(--text-dim); font-family:'DM Mono'; text-transform:uppercase; letter-spacing:.5px;}
+  .empty-state{
+    text-align:center; color:var(--text-dim); padding:40px 20px; border:1px dashed var(--line); border-radius:14px; font-size:14px;
+  }
+  .col-card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; position:relative;}
+  .col-card .rm{position:absolute; top:8px; right:8px; background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:14px;}
+  .col-card .ic{font-size:36px; text-align:center; margin-bottom:6px;}
+  .col-card .nm{font-weight:600; font-size:14px; text-align:center;}
+  .col-card .vl{text-align:center; color:var(--gold); font-family:'DM Mono'; font-size:13px; margin-top:2px;}
+  .col-lb-row{
+    display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:10px 14px; margin-bottom:8px;
+  }
+  .col-lb-row .r{font-family:'DM Mono'; color:var(--text-dim); width:22px;}
+  .col-lb-row .h{flex:1; font-weight:700; cursor:pointer;}
+  .col-lb-row .iv{font-family:'DM Mono'; color:var(--gold); font-size:13px;}
+  .col-lb-row .ic2{color:var(--text-dim); font-size:11px; margin-left:6px;}
+
+  /* glossary */
+  .gloss-item{background:var(--panel); border:1px solid var(--line); border-radius:12px; margin-bottom:10px; overflow:hidden;}
+  .gloss-head{display:flex; align-items:center; gap:12px; padding:14px 16px; cursor:pointer;}
+  .gloss-head .ic{font-size:26px;}
+  .gloss-head .nm{font-weight:700; font-size:16px; flex:1;}
+  .gloss-head .car{color:var(--text-dim); transition:.2s;}
+  .gloss-item.open .gloss-head .car{transform:rotate(90deg); color:var(--gold);}
+  .gloss-body{max-height:0; overflow:hidden; transition:.25s ease; padding:0 16px;}
+  .gloss-item.open .gloss-body{max-height:140px; padding:0 16px 16px;}
+  .gloss-body p{color:var(--text-dim); font-size:13.5px; line-height:1.5; font-family:'Lora';}
+
+  /* videos */
+  .video-card{background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; cursor:pointer;}
+  .video-card:hover{border-color:var(--gold);}
+  .video-card .vthumb{
+    height:110px; background:linear-gradient(135deg,#241a12,#3a241a); display:flex; align-items:center; justify-content:center;
+    font-size:34px; position:relative;
+  }
+  .video-card .vthumb .play{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:30px; color:var(--gold);
+    background:rgba(0,0,0,.25);
+  }
+  .video-card .vbody{padding:10px 12px;}
+  .video-card .vtitle{font-size:13px; font-weight:700; line-height:1.3;}
+  .video-card .vsrc{font-size:10.5px; color:var(--text-dim); font-family:'DM Mono'; margin-top:3px;}
+
+  /* trivia quiz */
+  .quiz-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px;}
+  .quiz-progress{font-family:'DM Mono'; font-size:11px; color:var(--text-dim); margin-bottom:10px;}
+  .quiz-question{font-size:16px; font-weight:700; margin-bottom:14px;}
+  .quiz-options{display:flex; flex-direction:column; gap:8px;}
+  .quiz-opt{
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:11px 14px; cursor:pointer;
+    font-size:14px; text-align:left;
+  }
+  .quiz-opt:hover{border-color:var(--gold);}
+  .quiz-opt.correct{border-color:#4ade80; background:rgba(74,222,128,.12); color:#4ade80;}
+  .quiz-opt.wrong{border-color:#e0273c; background:rgba(224,39,60,.12); color:#e0273c;}
+  .quiz-opt[disabled]{cursor:default;}
+  .quiz-done{text-align:center;}
+  .quiz-done .score{font-family:'Bebas Neue'; font-size:42px; color:var(--gold);}
+  .quiz-restart{
+    margin-top:12px; background:var(--panel2); border:1px solid var(--gold); color:var(--gold); border-radius:8px;
+    padding:9px 16px; cursor:pointer; font-family:'Barlow Condensed'; font-weight:700;
+  }
+  .speed-timer-bar{height:8px; border-radius:999px; background:var(--panel2); overflow:hidden; margin-bottom:14px;}
+  .speed-timer-fill{height:100%; background:linear-gradient(90deg,var(--terracotta),var(--gold)); transition:width .1s linear;}
+  .speed-icon{font-size:56px; text-align:center; margin-bottom:12px;}
+  .speed-streak{font-family:'DM Mono'; font-size:12px; color:var(--text-dim); text-align:center; margin-bottom:10px;}
+  .speed-start-btn{
+    width:100%; background:linear-gradient(135deg,var(--terracotta),#b8654a); border:none; color:#1a0f08;
+    padding:12px; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Barlow Condensed'; font-size:15px;
+  }
+
+  /* weekly challenge banner (Feed) */
+  .challenge-banner{
+    background:linear-gradient(135deg, rgba(128,0,32,.35), rgba(212,175,55,.12)); border:1px solid var(--gold);
+    border-radius:14px; padding:16px; margin-bottom:16px;
+  }
+  .challenge-banner .ctag{font-family:'DM Mono'; font-size:10.5px; color:var(--gold); text-transform:uppercase; letter-spacing:.5px;}
+  .challenge-banner h3{font-size:20px; margin:4px 0 6px;}
+  .challenge-banner p{font-size:13px; color:var(--text-dim); margin-bottom:10px;}
+  .challenge-banner button{
+    background:var(--terracotta); border:none; color:#1a0f08; font-weight:700; padding:9px 16px; border-radius:8px;
+    cursor:pointer; font-family:'Barlow Condensed';
+  }
+
+  /* notifications */
+  .bell-wrap{position:relative;}
+  .bell-btn{
+    position:relative; background:var(--panel); border:1px solid var(--line); color:var(--text);
+    width:38px; height:38px; border-radius:50%; font-size:16px; cursor:pointer;
+  }
+  .bell-btn .unread{
+    position:absolute; top:-3px; right:-3px; background:#e0273c; color:#fff; font-size:10px;
+    width:17px; height:17px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:'DM Mono'; border:2px solid var(--bg);
+  }
+  .notif-dropdown{
+    position:absolute; top:46px; right:0; width:300px; max-width:85vw; background:var(--panel);
+    border:1px solid var(--gold); border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.5);
+    display:none; flex-direction:column; z-index:40; overflow:hidden;
+  }
+  .notif-dropdown.show{display:flex;}
+  .notif-dropdown .nd-head{padding:12px 14px; border-bottom:1px solid var(--line); font-weight:700; background:var(--panel2);}
+  .nd-item{display:flex; gap:10px; padding:11px 14px; border-bottom:1px solid var(--line); cursor:pointer;}
+  .nd-item:last-child{border-bottom:none;}
+  .nd-item:hover{background:var(--panel2);}
+  .nd-item .ic{font-size:18px;}
+  .nd-item .tx{font-size:13px; line-height:1.35;}
+  .nd-item .tm{color:var(--text-dim); font-size:11px; font-family:'DM Mono'; margin-top:2px;}
+
+  /* seller profile modal */
+  .profile-box{width:320px;}
+  .profile-top{display:flex; gap:12px; align-items:center; margin-bottom:14px;}
+  .profile-avatar{
+    width:56px; height:56px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff8,var(--terracotta) 45%,var(--burgundy) 100%);
+    display:flex; align-items:center; justify-content:center; font-size:26px; border:1px solid var(--gold);
+  }
+  .profile-top .pn{font-weight:700; font-size:18px;}
+  .profile-top .pm{color:var(--text-dim); font-size:12px; font-family:'DM Mono';}
+  .profile-stats{display:flex; gap:10px; margin-bottom:14px;}
+  .profile-stats div{
+    flex:1; background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:8px; text-align:center;
+  }
+  .profile-stats .num{font-family:'Bebas Neue'; font-size:20px; color:var(--gold);}
+  .profile-stats .lbl{font-size:10px; color:var(--text-dim); font-family:'DM Mono'; text-transform:uppercase;}
+  .profile-actions{display:flex; gap:8px;}
+  .profile-actions button{
+    flex:1; padding:10px; border-radius:9px; font-weight:700; cursor:pointer; font-family:'Barlow Condensed'; font-size:14px; border:1px solid var(--line);
+  }
+  .follow-btn{background:var(--gold); color:#1a0f08; border-color:var(--gold) !important;}
+  .follow-btn.following{background:var(--panel2); color:var(--gold);}
+  .msg-btn{background:var(--panel2); color:var(--text);}
+
+  /* deal room modal */
+  .deal-box{width:340px;}
+  .deal-item{display:flex; gap:12px; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid var(--line);}
+  .deal-item .th{width:64px; height:64px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:30px; flex-shrink:0;}
+  .deal-item .nm{font-weight:700; font-size:15px;}
+  .deal-item .pr{color:var(--gold); font-family:'DM Mono'; font-size:13px; margin-top:2px;}
+  .deal-tabs{display:flex; gap:6px; margin-bottom:12px;}
+  .deal-tab{flex:1; text-align:center; padding:8px; border-radius:8px; background:var(--panel2); border:1px solid var(--line); cursor:pointer; font-size:13px; font-weight:600; color:var(--text-dim);}
+  .deal-tab.on{background:var(--terracotta); color:#1a0f08; border-color:var(--terracotta);}
+  .deal-pane{display:none;}
+  .deal-pane.on{display:block;}
+  .deal-box textarea{
+    width:100%; background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:8px;
+    padding:9px 12px; font-size:13.5px; font-family:'Barlow Condensed'; resize:none; height:64px; margin-top:8px;
+  }
+  .send-offer-btn{
+    width:100%; margin-top:12px; background:linear-gradient(135deg,var(--burgundy),var(--burgundy-l)); border:1px solid var(--gold);
+    color:var(--cream); padding:11px; border-radius:10px; font-weight:700; cursor:pointer; font-family:'Barlow Condensed'; font-size:15px;
+  }
+  .my-trade-pick{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+  .trade-pick-item{
+    background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-size:12px; cursor:pointer;
+  }
+  .trade-pick-item.on{border-color:var(--gold); background:rgba(212,175,55,.12); color:var(--gold);}
+
+  /* search + create listing */
+  .search-input{
+    width:100%; background:var(--panel); border:1px solid var(--line); color:var(--text); border-radius:10px;
+    padding:11px 14px; font-size:14px; margin-bottom:14px; font-family:'Barlow Condensed';
+  }
+  .search-input:focus{outline:none; border-color:var(--gold);}
+  .create-box{width:360px;}
+  .type-toggle{display:flex; gap:6px; margin-top:6px;}
+  .type-toggle div{
+    flex:1; text-align:center; padding:9px; border-radius:8px; background:var(--panel2); border:1px solid var(--line);
+    cursor:pointer; font-size:13px; font-weight:600; color:var(--text-dim);
+  }
+  .type-toggle div.on{background:var(--terracotta); color:#1a0f08; border-color:var(--terracotta);}
+  .create-box textarea{
+    width:100%; background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:8px;
+    padding:9px 12px; font-size:13.5px; font-family:'Barlow Condensed'; resize:none; height:60px; margin-top:6px;
+  }
+  .icon-pick{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;}
+  .icon-pick span{
+    width:38px; height:38px; border-radius:8px; background:var(--panel2); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer;
+  }
+  .icon-pick span.on{border-color:var(--gold); background:rgba(212,175,55,.12);}
+
+  @media (max-width:640px){
+    header{flex-wrap:wrap;}
+    nav{order:3; width:100%; justify-content:space-between;}
+    .page-head h1{font-size:30px;}
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+
+<!-- AUTH GATE -->
+<div class="modal-overlay show" id="authOverlay">
+  <div class="modal-box">
+    <h3>Welcome to Kim's Marbles</h3>
+    <div class="sub" style="margin-bottom:12px;">Log in or create an account to buy, sell, post, and go live</div>
+    <div class="field-lbl">Handle (for new accounts)</div>
+    <input type="text" id="authHandle" placeholder="e.g. GlassTrader">
+    <div class="field-lbl">Email</div>
+    <input type="text" id="authEmail" placeholder="you@example.com">
+    <div class="field-lbl">Password</div>
+    <input type="password" id="authPassword" placeholder="At least 8 characters">
+    <button class="send-offer-btn" onclick="doLogin()">Log In</button>
+    <button class="wp-btn" style="width:100%; margin-top:8px;" onclick="doRegister()">Create Account</button>
+    <button class="modal-close" onclick="skipAuth()">Just browsing for now</button>
+  </div>
+</div>
+
+
+<header>
+  <div class="brand">
+    <div class="mark"></div>
+    <div class="name-wrap">
+      <div class="name">Kim's <span>Marbles</span></div>
+      <div class="tagline">where you can find your marbles</div>
+    </div>
+  </div>
+  <nav id="nav">
+    <button class="active" data-view="market">Marketplace</button>
+    <button data-view="panels">Panels</button>
+    <button data-view="battles">PK-Battles</button>
+    <button data-view="feed">Feed</button>
+    <button data-view="collection">Collection</button>
+    <button data-view="learn">Learn</button>
+    <button data-view="profile">Me</button>
+  </nav>
+  <div style="display:flex; align-items:center; gap:10px;">
+    <div class="bell-wrap">
+      <button class="bell-btn" onclick="toggleInbox()">✉️<span class="unread" id="inboxUnread" style="display:none;">0</span></button>
+    </div>
+    <div class="bell-wrap">
+      <button class="bell-btn" onclick="toggleNotifs()">🔔<span class="unread" id="bellUnread" style="display:none;">0</span></button>
+      <div class="notif-dropdown" id="notifDropdown"></div>
+    </div>
+    <button class="go-live" onclick="openBroadcastSetup()">Go Live</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- MARKETPLACE -->
+  <section class="view active" id="view-market">
+    <div class="page-head">
+      <div>
+        <div class="tag">Community Marketplace</div>
+        <h1>Buy · Sell · Trade</h1>
+        <p>Live listings from the community — tap a card to open the deal room.</p>
+      </div>
+      <button class="go-live" style="background:linear-gradient(135deg,var(--terracotta),#b8654a);" onclick="openCreateListing()">＋ List a Marble</button>
+    </div>
+    <input type="text" class="search-input" id="marketSearch" placeholder="🔍 Search listings by name…" oninput="debouncedSearch()">
+    <div class="filters" id="marketFilters">
+      <div class="chip on" data-cat="all" onclick="filterMarket(this.dataset.cat,this)">All</div>
+      <div class="chip" data-cat="Swirl" onclick="filterMarket(this.dataset.cat,this)">Swirls</div>
+      <div class="chip" data-cat="Sulphide" onclick="filterMarket(this.dataset.cat,this)">Sulphides</div>
+      <div class="chip" data-cat="Cat's Eye" onclick="filterMarket(this.dataset.cat,this)">Cat's Eyes</div>
+      <div class="chip" data-cat="Aggie" onclick="filterMarket(this.dataset.cat,this)">Aggies</div>
+      <div class="chip" data-cat="Vintage" onclick="filterMarket(this.dataset.cat,this)">Vintage</div>
+      <div class="chip" data-cat="Auction" onclick="filterMarket(this.dataset.cat,this)">🔨 Live Auctions</div>
+    </div>
+    <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
+      <div class="grid" id="market-grid" style="flex:1; min-width:260px;"></div>
+      <div class="leaderboard-box">
+        <h3>🏆 Top Collectors</h3>
+        <div id="leaderboardList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PANELS -->
+  <section class="view" id="view-panels">
+    <div class="page-head">
+      <div>
+        <div class="tag">Panel Conversations</div>
+        <h1>Live Panels</h1>
+        <p>Multi-guest talk rooms — appraisals, trade-talk, community roundtables.</p>
+      </div>
+    </div>
+    <div class="filters">
+      <div class="chip on" data-pf="all" onclick="filterPanels('all',this)">All</div>
+      <div class="chip" data-pf="live" onclick="filterPanels('live',this)">Live Now</div>
+      <div class="chip" data-pf="upcoming" onclick="filterPanels('upcoming',this)">Upcoming</div>
+    </div>
+    <div class="panel-grid" id="panel-grid"></div>
+  </section>
+
+  <!-- BATTLES -->
+  <section class="view" id="view-battles">
+    <div class="page-head">
+      <div>
+        <div class="tag">PK-Battle Arena</div>
+        <h1>Head-to-Head</h1>
+        <p>Collectors battle it out — gifts and trade value decide the winner.</p>
+      </div>
+      <button class="go-live" style="background:linear-gradient(135deg,var(--terracotta),#b8654a);" onclick="openCreateBattle()">⚔️ Create Battle</button>
+    </div>
+
+    <div class="arena" style="position:relative;">
+      <span class="share-btn" style="top:16px; right:16px;" onclick="openShare(document.getElementById('fighterAName').textContent + ' vs ' + document.getElementById('fighterBName').textContent)">⤴</span>
+      <div class="arena-top">
+        <div class="fighter a">
+          <div class="name" id="fighterAName">🦋 Joyce</div>
+          <div class="score" id="scoreA">1,240</div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="fighter b">
+          <div class="name" id="fighterBName">CaliBones</div>
+          <div class="score" id="scoreB">980</div>
+        </div>
+      </div>
+      <div class="meter"><div class="a" id="meterA" style="width:56%"></div><div class="b" id="meterB" style="width:44%"></div></div>
+      <div class="timer" id="arenaTimer">⏱ Round ends in 02:14</div>
+      <div class="gift-row">
+        <div class="gift" onclick="sendGift('a',50,\"Cat's Eye\")"><div class="ic">🔮</div>Cat's Eye · 50</div>
+        <div class="gift" onclick="sendGift('a',150,'Swirl')"><div class="ic">💎</div>Swirl · 150</div>
+        <div class="gift" onclick="sendGift('b',50,'Oxblood')"><div class="ic">🌊</div>Oxblood · 50</div>
+        <div class="gift" onclick="sendGift('b',300,'Rare Mega')"><div class="ic">👑</div>Rare Mega · 300</div>
+      </div>
+    </div>
+
+    <div class="page-head" style="margin-top:8px;">
+      <h1 style="font-size:26px;">More Battles</h1>
+    </div>
+    <div class="battle-list" id="battle-list"></div>
+  </section>
+
+  <!-- FEED -->
+  <section class="view" id="view-feed">
+    <div class="page-head">
+      <div>
+        <div class="tag">Community Feed</div>
+        <h1>The Wall</h1>
+        <p>Hauls, wins, questions — posted by the community.</p>
+      </div>
+    </div>
+    <div class="challenge-banner">
+      <div class="ctag">🏆 This Week's Challenge</div>
+      <h3 id="challengeTitle">Show off your best Swirl</h3>
+      <p id="challengeDesc">Post a photo of your finest swirl marble — the community votes with ❤️. Top-liked entry gets featured Sunday.</p>
+      <button onclick="startChallengeEntry()">Submit Your Entry</button>
+    </div>
+    <div class="filters">
+      <div class="chip on" onclick="filterFeed('all', this)">All Posts</div>
+      <div class="chip" onclick="filterFeed('challenge', this)">🏆 Challenge Entries</div>
+    </div>
+    <div class="composer">
+      <textarea id="postText" placeholder="Share a haul, a question, a battle win…"></textarea>
+      <div class="composer-row">
+        <select id="postAttach">
+          <option value="">📎 Attach a marble (optional)</option>
+        </select>
+        <button class="wp-btn" onclick="publishPost()">Post</button>
+      </div>
+    </div>
+    <div id="feedList"></div>
+  </section>
+
+  <!-- COLLECTION -->
+  <section class="view" id="view-collection">
+    <div class="page-head">
+      <div>
+        <div class="tag">My Collection</div>
+        <h1>Your Marbles</h1>
+        <p>Everything you've bought, traded for, or added — with an estimated value.</p>
+      </div>
+      <button class="go-live" style="background:linear-gradient(135deg,var(--terracotta),#b8654a);" onclick="featureMyCollection()">🏆 Feature My Collection</button>
+    </div>
+    <div class="collection-summary">
+      <div><span class="num" id="colCount">0</span><span class="lbl">Marbles</span></div>
+      <div><span class="num" id="colValue">$0</span><span class="lbl">Est. Value</span></div>
+      <div><span class="num" id="colRank">Unranked</span><span class="lbl">Collector Rank</span></div>
+    </div>
+    <div class="grid" id="collection-grid"></div>
+    <div id="collectionEmpty" class="empty-state">
+      Your collection is empty — head to the Marketplace and tap <b>＋ Add to Collection</b> on anything you own.
+    </div>
+
+    <div class="page-head" style="margin-top:24px;">
+      <h1 style="font-size:26px;">🏆 Top Collections</h1>
+    </div>
+    <div id="collectionLeaderboard"></div>
+  </section>
+
+  <!-- LEARN -->
+  <section class="view" id="view-learn">
+    <div class="page-head">
+      <div>
+        <div class="tag">Marble Glossary</div>
+        <h1>Learn the Lingo</h1>
+        <p>Know your glass — built with the community, curated by SwanyBot 🤖.</p>
+      </div>
+    </div>
+    <div id="glossaryList"></div>
+
+    <div class="page-head" style="margin-top:24px;">
+      <div>
+        <div class="tag">Watch &amp; Learn</div>
+        <h1 style="font-size:26px;">Marble Videos</h1>
+      </div>
+    </div>
+    <div class="grid" id="videoGrid"></div>
+
+    <div class="page-head" style="margin-top:24px;">
+      <div>
+        <div class="tag">Test Yourself</div>
+        <h1 style="font-size:26px;">Marble Trivia</h1>
+        <p>Answer a few and see how sharp your eye is.</p>
+      </div>
+    </div>
+    <div class="quiz-card" id="quizCard"></div>
+
+    <div class="page-head" style="margin-top:24px;">
+      <div>
+        <div class="tag">Beat the Clock</div>
+        <h1 style="font-size:26px;">Speed ID</h1>
+        <p>Name the marble type before time runs out. Personal best: <span id="speedBest">0</span>.</p>
+      </div>
+    </div>
+    <div class="quiz-card" id="speedCard"></div>
+  </section>
+
+  <!-- VIDEO PLAYER -->
+  <div class="modal-overlay" id="videoOverlay">
+    <div class="modal-box" style="width:360px;">
+      <h3 id="videoModalTitle">Video</h3>
+      <div class="wp-player-wrap" style="margin:12px 0;" id="videoPlayerWrap"></div>
+      <button class="modal-close" onclick="closeVideoModal()">Close</button>
+    </div>
+  </div>
+
+  <!-- PROFILE / ME -->
+  <section class="view" id="view-profile">
+    <div class="page-head">
+      <div>
+        <div class="tag">Your Account</div>
+        <h1>Me</h1>
+        <p>Your identity, preferences, and achievements across Kim's Marbles.</p>
+      </div>
+    </div>
+
+    <div class="me-card">
+      <div class="me-avatar" id="meAvatar">🦋</div>
+      <div class="me-fields">
+        <input type="text" id="meName" value="Joyce 🦋" class="me-input-name">
+        <textarea id="meBio" class="me-input-bio" placeholder="Add a short bio…">Marble collector since 2019 · Swirls & sulphides · Host of Sunday Trade Talk</textarea>
+        <button class="wp-btn" onclick="saveMe()">Save Profile</button>
+      </div>
+    </div>
+
+    <div class="page-head" style="margin-top:8px;">
+      <h1 style="font-size:26px;">📊 Dashboard</h1>
+    </div>
+    <div class="collection-summary">
+      <div><span class="num" id="dashChallengeCount">0</span><span class="lbl">Challenge Entries</span></div>
+      <div><span class="num" id="dashQuizBest">0/7</span><span class="lbl">Trivia Best</span></div>
+      <div><span class="num" id="dashSpeedBest">0</span><span class="lbl">Speed ID Best</span></div>
+    </div>
+    <div id="activityLogList"></div>
+
+    <div class="settings-row">
+      <div class="settings-card">
+        <div class="sc-label">Appearance</div>
+        <div class="theme-toggle">
+          <button id="themeLight" class="on" onclick="setTheme('light')">☀️ Light</button>
+          <button id="themeDark" onclick="setTheme('dark')">🌙 Dark</button>
+        </div>
+      </div>
+      <div class="settings-card">
+        <div class="sc-label">Notifications</div>
+        <label class="switch-row"><input type="checkbox" checked> New offers & bids</label>
+        <label class="switch-row"><input type="checkbox" checked> Panel & battle reminders</label>
+        <label class="switch-row"><input type="checkbox"> Marketing emails</label>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-card">
+        <div class="sc-label">Payouts & Tipping</div>
+        <div id="payoutStatus" style="font-size:12.5px; color:var(--text-dim); margin-bottom:10px;">Checking status…</div>
+        <button class="wp-btn" style="width:100%;" onclick="startPayoutOnboarding()">💳 Set Up Payouts</button>
+      </div>
+      <div class="settings-card">
+        <div class="sc-label">Live Chat Moderation</div>
+        <label class="switch-row"><input type="checkbox" id="modEnabled" onchange="saveModSettings()"> Auto-hide blocked words in my streams</label>
+        <textarea id="modWordList" placeholder="One word per line…" style="width:100%; height:60px; background:var(--bg); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:8px 10px; font-size:12.5px; font-family:'DM Mono'; resize:none; margin-top:6px;" onchange="saveModSettings()"></textarea>
+      </div>
+    </div>
+
+    <div class="page-head" style="margin-top:8px;">
+      <h1 style="font-size:26px;">Achievements</h1>
+    </div>
+    <div class="badge-grid" id="badgeGrid"></div>
+
+    <div class="page-head" style="margin-top:24px;">
+      <h1 style="font-size:26px;">My Listings</h1>
+    </div>
+    <div id="myListingsList"></div>
+  </section>
+
+</main>
+
+<footer>Kim's Marbles — Community Marketplace · Panels · Broadcast Arena — preview build</footer>
+<div class="toast" id="toast"></div>
+
+<!-- SWANYBOT WELCOME -->
+<div class="modal-overlay bot-modal" id="botOverlay">
+  <div class="modal-box">
+    <div class="bot-head">
+      <div class="bot-avatar">🤖</div>
+      <div>
+        <h3>Hey, I'm SwanyBot</h3>
+        <div class="sub">YOUR KIM'S MARBLES GUIDE</div>
+      </div>
+    </div>
+    <div class="bot-body">
+      <button class="bot-speak-btn" id="botSpeakBtn" onclick="toggleBotSpeech()">🔊 Hear it out loud</button>
+      <label class="bot-mute-row"><input type="checkbox" id="botMuteToggle" onchange="setBotAutoplayPref(this.checked)"> Don't auto-play voice next time</label>
+      <p data-speak id="bl-intro">Welcome! Here's the rundown so you can jump right in.</p>
+      <ul class="bot-list">
+        <li data-speak id="bl-market"><span class="ic">🛒</span><span><span class="lbl2">Marketplace</span><span class="d">Buy, sell, or trade marbles with the community — tap any card to open a deal room.</span></span></li>
+        <li data-speak id="bl-panels"><span class="ic">🎙️</span><span><span class="lbl2">Panels</span><span class="d">Join live multi-guest talk rooms for appraisals and trade-talk.</span></span></li>
+        <li data-speak id="bl-battles"><span class="ic">⚔️</span><span><span class="lbl2">PK-Battles</span><span class="d">Watch collectors go head-to-head — send gifts to help your favorite win.</span></span></li>
+        <li data-speak id="bl-chat"><span class="ic">🌐</span><span><span class="lbl2">Community Chat</span><span class="d">Type in any language — everyone reads it in theirs, auto-translated.</span></span></li>
+        <li data-speak id="bl-share"><span class="ic">⤴️</span><span><span class="lbl2">Share</span><span class="d">Send any listing, panel, or battle to friends in one tap.</span></span></li>
+      </ul>
+      <div class="bot-tip" data-speak id="bl-tip">💡 <b>Tip:</b> Go live anytime with the "Go Live" button up top — I'll help you set up your camera and invite guests.</div>
+    </div>
+    <button class="bot-cta" onclick="closeBot()">Got it — let's go!</button>
+  </div>
+</div>
+<div class="bot-fab" id="botFab" onclick="openBot()" style="display:none;">🤖 Ask SwanyBot</div>
+
+
+<!-- BROADCAST SETUP -->
+<div class="modal-overlay" id="setupOverlay">
+  <div class="modal-box setup-box">
+    <h3>Go Live</h3>
+    <div class="sub">Set up your stream before you start</div>
+    <div class="setup-preview" id="setupPreview">
+      <video id="setupVideo" autoplay muted playsinline style="display:none; width:100%; height:100%; object-fit:cover; border-radius:12px;"></video>
+      <div id="setupFallback">🎥<span class="rec">CAMERA PREVIEW</span></div>
+    </div>
+    <div class="field-lbl">Stream title</div>
+    <input type="text" id="setupTitle" value="Sunday Trade Talk with Joyce 🦋">
+    <div class="field-lbl">Format</div>
+    <select id="setupFormat">
+      <option>Panel — Multi-guest</option>
+      <option>Solo Broadcast</option>
+      <option>PK-Battle</option>
+      <option>Marketplace Showcase</option>
+    </select>
+    <div class="field-lbl">Broadcast to</div>
+    <div class="platform-row" id="platformRow">
+      <div class="platform-chip on" onclick="this.classList.toggle('on')">📍 Kim's Marbles</div>
+      <div class="platform-chip" onclick="this.classList.toggle('on')">📺 YouTube</div>
+      <div class="platform-chip" onclick="this.classList.toggle('on')">🎵 TikTok</div>
+      <div class="platform-chip" onclick="this.classList.toggle('on')">📘 Facebook</div>
+      <div class="platform-chip" onclick="this.classList.toggle('on')">🟣 Twitch</div>
+    </div>
+    <button class="start-btn" onclick="startBroadcast()">Start Streaming</button>
+    <button class="modal-close" onclick="closeSetup()">Cancel</button>
+  </div>
+</div>
+
+<!-- LIVE ROOM -->
+<div class="live-room" id="liveRoom">
+  <div class="lr-header">
+    <span class="live-pill">LIVE</span>
+    <div class="lr-title" id="lrTitle">Sunday Trade Talk</div>
+    <div class="lr-viewers">👁 <span id="lrViewers">1</span></div>
+    <span class="share-btn" style="position:static;" onclick="openShare(document.getElementById('lrTitle').textContent)">⤴</span>
+    <button class="lr-close" onclick="leaveRoom()">✕</button>
+  </div>
+  <div class="lr-body">
+    <div class="lr-stage" id="lrStage"></div>
+    <div class="wp-panel" id="wpPanel">
+      <div class="wp-player-wrap" id="wpPlayerWrap">
+        <div class="wp-empty" id="wpEmpty">📺<span>No video loaded yet</span></div>
+      </div>
+      <div class="wp-now">
+        <div class="np" id="wpNowTitle">Nothing playing<small id="wpNowSub">Load a YouTube link to start the party</small></div>
+        <div class="wp-sync" id="wpSyncTag" style="display:none;">Synced for <span id="wpSyncCount">1</span> viewers</div>
+      </div>
+      <div class="wp-controls-row" id="wpHostControls">
+        <button class="wp-btn" onclick="wpControl('play')">▶ Play</button>
+        <button class="wp-btn" onclick="wpControl('pause')">⏸ Pause</button>
+        <button class="wp-btn" onclick="wpControl('restart')">⟲ Restart</button>
+      </div>
+      <div class="wp-load-row" id="wpLoadRow">
+        <input type="text" id="wpUrlInput" placeholder="Paste a YouTube link or video ID…">
+        <button onclick="wpLoadForEveryone()">Load for Everyone</button>
+      </div>
+      <div class="wp-queue-head">Up Next</div>
+      <div id="wpQueueList"></div>
+      <div class="wp-load-row">
+        <input type="text" id="wpQueueInput" placeholder="Add a video to the queue…">
+        <button onclick="wpAddToQueue()">＋ Add</button>
+      </div>
+      <div class="wp-note">Playback sync uses embed reloads in this preview — production wiring uses the YouTube IFrame API over your socket layer for frame-accurate sync.</div>
+    </div>
+    <div class="lr-sidebar">
+      <div class="chat-head" style="border-bottom:1px solid var(--line);">
+        <div class="t">Room Chat<small>Auto-translated</small></div>
+      </div>
+      <div class="chat-body" id="lrChatBody"></div>
+      <div class="chat-input">
+        <input type="text" id="lrChatInput" placeholder="Say something…" onkeydown="if(event.key==='Enter')sendLrChat()">
+        <button onclick="sendLrChat()">➤</button>
+      </div>
+    </div>
+  </div>
+  <div class="lr-controls" id="lrControls"></div>
+</div>
+
+<!-- REPORT -->
+<div class="modal-overlay" id="reportOverlay">
+  <div class="modal-box">
+    <h3>Report</h3>
+    <div class="sub" id="reportSubtitle">Help us keep the community safe</div>
+    <div class="report-reasons">
+      <label><input type="radio" name="reportReason" value="Spam" checked> Spam</label>
+      <label><input type="radio" name="reportReason" value="Scam or fraud"> Scam / Fraud</label>
+      <label><input type="radio" name="reportReason" value="Fake or misrepresented listing"> Fake / Misrepresented Listing</label>
+      <label><input type="radio" name="reportReason" value="Inappropriate content"> Inappropriate Content</label>
+      <label><input type="radio" name="reportReason" value="Other"> Other</label>
+    </div>
+    <textarea id="reportDetails" placeholder="Add any details (optional)…"></textarea>
+    <button class="report-submit" style="margin-top:12px;" onclick="submitReport()">Submit Report</button>
+    <button class="modal-close" onclick="closeReport()">Cancel</button>
+  </div>
+</div>
+
+<!-- INBOX -->
+<div class="chat-drawer" id="inboxDrawer" style="right:auto; left:22px; bottom:90px;">
+  <div class="chat-head">
+    <div class="t" id="inboxHeadTitle">Messages<small>Direct messages</small></div>
+    <button onclick="toggleInbox()">✕</button>
+  </div>
+  <div id="inboxList" class="chat-body"></div>
+  <div id="inboxThread" style="display:none; flex-direction:column; flex:1; min-height:0;">
+    <div style="padding:8px 12px; border-bottom:1px solid var(--line);">
+      <button class="modal-close" style="margin:0;" onclick="showInboxList()">← All messages</button>
+    </div>
+    <div id="inboxThreadBody" class="chat-body"></div>
+    <div class="chat-input">
+      <input type="text" id="inboxInput" placeholder="Type a message…" onkeydown="if(event.key==='Enter')sendInboxMsg()">
+      <button onclick="sendInboxMsg()">➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE BATTLE -->
+<!-- INVITE GUEST -->
+<!-- TIP -->
+<div class="modal-overlay" id="tipOverlay">
+  <div class="modal-box">
+    <h3>💰 Send a Tip</h3>
+    <div class="sub" style="margin-bottom:12px;">Support <span id="tipHostName">the host</span> — Stripe handles your card, wallet, or preferred method</div>
+    <div class="platform-row" id="tipAmountRow">
+      <div class="platform-chip on" data-amt="500" onclick="pickTipAmount(this)">$5</div>
+      <div class="platform-chip" data-amt="1000" onclick="pickTipAmount(this)">$10</div>
+      <div class="platform-chip" data-amt="2000" onclick="pickTipAmount(this)">$20</div>
+      <div class="platform-chip" data-amt="5000" onclick="pickTipAmount(this)">$50</div>
+    </div>
+    <div class="field-lbl">Or enter a custom amount ($)</div>
+    <input type="text" id="tipCustomAmount" placeholder="e.g. 15">
+    <textarea id="tipMessage" placeholder="Add a message (optional)…" style="margin-top:8px;"></textarea>
+    <button class="send-offer-btn" onclick="sendTip()">Continue to Payment</button>
+    <button class="modal-close" onclick="closeTipModal()">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="inviteOverlay">
+  <div class="modal-box">
+    <h3>Invite a Guest</h3>
+    <div class="sub" style="margin-bottom:10px;">Share this link so someone can join your stream</div>
+    <div id="inviteLinkBody"></div>
+    <button class="modal-close" onclick="closeInviteGuest()">Close</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="battleOverlay">
+  <div class="modal-box create-box">
+    <h3>Create a PK-Battle</h3>
+    <div class="sub" style="margin-bottom:10px;">Challenge a collector head-to-head</div>
+    <div class="field-lbl">Opponent</div>
+    <input type="text" id="cbOpponent" placeholder="Opponent's handle (e.g. CaliBones)">
+    <div class="field-lbl">Wager</div>
+    <div class="type-toggle" id="cbWager">
+      <div class="on" data-w="points">Points Only</div>
+      <div data-w="marble">Stake a Marble</div>
+    </div>
+    <div id="cbMarblePane" style="display:none; margin-top:8px;">
+      <select id="cbMarblePick"></select>
+    </div>
+    <div class="field-lbl">Round length</div>
+    <select id="cbLength">
+      <option>2 minutes</option><option selected>5 minutes</option><option>10 minutes</option>
+    </select>
+    <button class="send-offer-btn" onclick="sendBattleChallenge()">Send Challenge</button>
+    <button class="modal-close" onclick="closeCreateBattle()">Cancel</button>
+  </div>
+</div>
+
+<!-- CREATE LISTING -->
+<div class="modal-overlay" id="createOverlay">
+  <div class="modal-box create-box">
+    <h3>List a Marble</h3>
+    <div class="sub" style="margin-bottom:10px;">Put it in front of the whole community</div>
+    <div class="field-lbl">Icon</div>
+    <div class="icon-pick" id="iconPick"></div>
+    <div class="field-lbl">Name</div>
+    <input type="text" id="clName" placeholder="e.g. Blue Ribbon Swirl">
+    <div class="field-lbl">Category</div>
+    <select id="clCat">
+      <option>Swirl</option><option>Sulphide</option><option value="Cat's Eye">Cat's Eye</option><option>Aggie</option><option>Vintage</option>
+    </select>
+    <div class="field-lbl">Condition</div>
+    <select id="clGrade">
+      <option value="mint">Mint</option><option value="near-mint">Near Mint</option><option value="good">Good</option>
+    </select>
+    <div class="field-lbl">Listing type</div>
+    <div class="type-toggle" id="clType">
+      <div class="on" data-t="sale">For Sale</div>
+      <div data-t="trade">Trade Only</div>
+      <div data-t="auction">Auction</div>
+    </div>
+    <div class="field-lbl" id="clPriceLbl">Price ($)</div>
+    <input type="text" id="clPrice" value="50">
+    <textarea id="clDesc" placeholder="Describe condition, era, maker…"></textarea>
+    <button class="send-offer-btn" onclick="publishListing()">Publish Listing</button>
+    <button class="modal-close" onclick="closeCreateListing()">Cancel</button>
+  </div>
+</div>
+
+<!-- SELLER PROFILE -->
+<div class="modal-overlay" id="profileOverlay">
+  <div class="modal-box profile-box">
+    <div class="profile-top">
+      <div class="profile-avatar" id="pfAvatar">🎱</div>
+      <div>
+        <div class="pn" id="pfName">MarbleMike</div>
+        <div class="pm" id="pfMember">Member since 2025</div>
+      </div>
+    </div>
+    <div class="profile-stats">
+      <div><div class="num" id="pfListings">12</div><div class="lbl">Listings</div></div>
+      <div><div class="num" id="pfTrades">48</div><div class="lbl">Trades</div></div>
+      <div><div class="num" id="pfRating">4.9★</div><div class="lbl">Rating</div></div>
+    </div>
+    <div class="profile-actions">
+      <button class="follow-btn" id="followBtn" onclick="toggleFollow()">＋ Follow</button>
+      <button class="msg-btn" onclick="openInboxThread(document.getElementById('pfName').textContent)">💬 Message</button>
+    </div>
+    <button class="msg-btn" style="width:100%; margin-top:8px; border-color:var(--burgundy); color:var(--terracotta);" onclick="challengeToBattle()">⚔️ Challenge to PK-Battle</button>
+    <button class="msg-btn" style="width:100%; margin-top:8px; color:var(--text-dim);" onclick="openReport('user', document.getElementById('pfName').textContent)">⚠️ Report User</button>
+    <button class="modal-close" onclick="closeProfile()">Close</button>
+  </div>
+</div>
+
+<!-- DEAL ROOM -->
+<div class="modal-overlay" id="dealOverlay">
+  <div class="modal-box deal-box">
+    <h3>Deal Room</h3>
+    <div class="sub" style="margin-bottom:14px;">Negotiate directly with the seller</div>
+    <div class="deal-item">
+      <div class="th" id="dealIcon" style="background:radial-gradient(circle,#3a241a,#171110);">🔮</div>
+      <div>
+        <div class="nm" id="dealName">Vintage Oxblood Swirl</div>
+        <div class="pr" id="dealPrice">$85 · MarbleMike</div>
+      </div>
+    </div>
+    <div class="deal-tabs">
+      <div class="deal-tab on" onclick="switchDealTab('buy',this)">Buy Now</div>
+      <div class="deal-tab" onclick="switchDealTab('offer',this)">Make Offer</div>
+      <div class="deal-tab" onclick="switchDealTab('trade',this)">Propose Trade</div>
+    </div>
+    <div class="deal-pane on" id="pane-buy">
+      <p style="color:var(--text-dim); font-size:13.5px;">Buy instantly at the listed price — payment held in escrow until the seller ships.</p>
+    </div>
+    <div class="deal-pane" id="pane-offer">
+      <div class="field-lbl">Your offer</div>
+      <input type="text" id="offerAmount" value="$70">
+      <textarea placeholder="Add a message (optional)…"></textarea>
+    </div>
+    <div class="deal-pane" id="pane-trade">
+      <div class="field-lbl">Offer from your collection</div>
+      <div class="my-trade-pick" id="tradePickList"></div>
+      <textarea placeholder="Add a message (optional)…"></textarea>
+    </div>
+    <button class="send-offer-btn" id="dealActionBtn" onclick="sendDeal()">Buy Now — $85</button>
+    <button class="modal-close" onclick="closeDeal()">Cancel</button>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="modal-overlay" id="shareOverlay">
+  <div class="modal-box">
+    <h3>Share</h3>
+    <div class="sub" id="shareSubtitle">Send this to friends</div>
+    <div class="share-options">
+      <div class="share-opt" onclick="shareVia('X / Twitter')">🐦<div class="lbl">X</div></div>
+      <div class="share-opt" onclick="shareVia('Facebook')">📘<div class="lbl">Facebook</div></div>
+      <div class="share-opt" onclick="shareVia('WhatsApp')">💬<div class="lbl">WhatsApp</div></div>
+      <div class="share-opt" onclick="shareVia('SMS')">✉️<div class="lbl">Text</div></div>
+    </div>
+    <div class="copy-row">
+      <input type="text" id="shareLink" readonly value="kimsmarbles.app/share/xyz123">
+      <button onclick="copyShareLink()">Copy</button>
+    </div>
+    <button class="modal-close" onclick="closeShare()">Close</button>
+  </div>
+</div>
+
+<!-- MULTI-LANGUAGE CHAT -->
+<div class="chat-bubble" id="chatBubble" onclick="toggleChat()">💬<span class="unread" id="chatUnread">3</span></div>
+<div class="chat-drawer" id="chatDrawer">
+  <div class="chat-head">
+    <div class="t">Community Chat<small>Auto-translated · live</small></div>
+    <button onclick="toggleChat()">✕</button>
+  </div>
+  <div class="lang-row">
+    <label>Show me in</label>
+    <select id="langSelect" onchange="renderChat()">
+      <option value="en">🇬🇧 English</option>
+      <option value="es">🇪🇸 Español</option>
+      <option value="fr">🇫🇷 Français</option>
+      <option value="ja">🇯🇵 日本語</option>
+      <option value="pt">🇧🇷 Português</option>
+      <option value="de">🇩🇪 Deutsch</option>
+    </select>
+  </div>
+  <div class="chat-body" id="chatBody"></div>
+  <div class="chat-input">
+    <input type="text" id="chatInput" placeholder="Type in any language…" onkeydown="if(event.key==='Enter')sendChat()">
+    <button onclick="sendChat()">➤</button>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   LIVE BACKEND WIRING
+   Swap these two constants for your real deployed domain once the backend
+   (kims-marbles-backend) is live on your VPS. Everything below that calls
+   apiFetch() is hitting your real Express API — not mock data.
+   ========================================================================= */
+const API_URL = 'https://api.kimsmarbles.app';   // <-- your API domain. Use '' if nginx serves this page AND proxies /api + /socket.io on the same domain (see DEPLOY.md)
+const SOCKET_URL = API_URL || window.location.origin;   // Socket.io server — same host as the API
+
+let authToken = localStorage.getItem('kmToken') || null;
+let currentUser = JSON.parse(localStorage.getItem('kmUser') || 'null'); // {id, handle}
+
+function setSession(user, tokens){
+  currentUser = user;
+  authToken = tokens?.accessToken || authToken;
+  localStorage.setItem('kmUser', JSON.stringify(user));
+  if (tokens?.accessToken) localStorage.setItem('kmToken', tokens.accessToken);
+  if (tokens?.refreshToken) localStorage.setItem('kmRefreshToken', tokens.refreshToken);
+}
+function clearSession(){
+  authToken = null; currentUser = null;
+  localStorage.removeItem('kmToken'); localStorage.removeItem('kmUser'); localStorage.removeItem('kmRefreshToken');
+}
+
+// Thin wrapper: JSON body, auth header, consistent error handling. Every
+// real-backend call in this file goes through this — search "apiFetch(" to
+// see exactly which features are wired vs. still local-only.
+async function apiFetch(path, options = {}){
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  let res;
+  try{
+    res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  }catch(err){
+    toast("Can't reach the server — check API_URL is set to your deployed backend");
+    throw err;
+  }
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok){
+    toast(data.error || `Request failed (${res.status})`);
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
+  return data;
+}
+
+/* ---- REAL-TIME (Socket.io) ---- */
+// Connects once, after login. Powers live room chat, reactions, and watch-party
+// sync — the one real-time layer that CAN live in a single HTML file, unlike
+// the mediasoup SFU (needs mediasoup-client, which needs a bundler — see
+// client-reference/mediaClient.js in the backend repo for that piece).
+let socket = null;
+function connectSocket(){
+  if(socket || typeof io === 'undefined') return;
+  socket = io(SOCKET_URL, { auth: { token: authToken } });
+  socket.on('connect_error', ()=>{ /* silent — REST features still work without sockets */ });
+
+  socket.on('room:chat', (msg)=>{
+    if(msg.userId === currentUser?.id) return; // we already rendered our own optimistically
+    if(messageIsBlocked(msg.text)){
+      appendLrChatMessage(msg.handle, '[message hidden by moderation]', false, true);
+      return;
+    }
+    appendLrChatMessage(msg.handle, msg.text, false);
+  });
+  socket.on('room:reaction', ({emoji})=>{ lrReactVisual(emoji); });
+  socket.on('room:guest-joined', ({handle})=>{ if(handle) toast(`${handle} joined the room`); });
+
+  socket.on('watchparty:load', ({youtubeId, title})=>{ playVideo({title: title||'Now Playing', id: youtubeId}, false); });
+  socket.on('watchparty:control', ({action})=>{ wpApplyRemoteControl(action); });
+}
+
+/* ---- ACHIEVEMENTS (declared early — renderCollection() calls renderBadges()
+   on load, so this state must exist before that runs, not after) ---- */
+const badgeMeta = {
+  quizWhiz:{ic:'🧠', nm:'Quiz Whiz', d:'Score 70%+ on Marble Trivia'},
+  listed:{ic:'🆕', nm:'First Listing', d:'List a marble'},
+  traded:{ic:'🤝', nm:'Trader', d:'Make a deal'},
+  collector:{ic:'📦', nm:'Collector', d:'Own 3+ marbles'},
+  followed:{ic:'👥', nm:'Socialite', d:'Follow a collector'},
+  challenged:{ic:'⚔️', nm:'Rival', d:'Send a battle challenge'},
+  wentLive:{ic:'📡', nm:'Broadcaster', d:'Go live once'},
+  posted:{ic:'📣', nm:'Community Voice', d:'Post to the feed'},
+};
+let achievementRows = Object.keys(badgeMeta).map(key=>({ key, unlocked:false }));
+async function loadAchievements(){
+  if(!authToken){ renderBadges(); return; }
+  try{
+    achievementRows = await apiFetch('/api/achievements');
+  }catch(_err){ /* keep previous state */ }
+  renderBadges();
+}
+function renderBadges(){
+  document.getElementById('badgeGrid').innerHTML = achievementRows.map(r=>{
+    const meta = badgeMeta[r.key] || { ic:r.icon, nm:r.name, d:r.description };
+    return `<div class="badge-card ${r.unlocked?'unlocked':''}"><div class="bi">${meta.ic}</div><div class="bn">${meta.nm}</div><div class="bd">${meta.d}</div></div>`;
+  }).join('');
+}
+async function unlockAch(key){
+  if(!authToken) return; // achievements only make sense for a logged-in account
+  const row = achievementRows.find(r=>r.key===key);
+  if(row?.unlocked) return;
+  try{
+    await apiFetch(`/api/achievements/${key}/unlock`, { method:'POST' });
+    if(row) row.unlocked = true;
+    renderBadges();
+    const meta = badgeMeta[key];
+    if(meta) toast(`🏅 Achievement unlocked: ${meta.nm}`);
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+
+/* ---- AUTH GATE ---- */
+async function doRegister(){
+  const handle = document.getElementById('authHandle').value.trim();
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  if(!handle || !email || !password){ toast('Fill in all fields'); return; }
+  try{
+    const data = await apiFetch('/api/auth/register', { method:'POST', body: JSON.stringify({ handle, email, password }) });
+    setSession(data.user, data);
+    onAuthed();
+  }catch(_err){ /* apiFetch already toasted the error */ }
+}
+async function doLogin(){
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  if(!email || !password){ toast('Enter email and password'); return; }
+  try{
+    const data = await apiFetch('/api/auth/login', { method:'POST', body: JSON.stringify({ email, password }) });
+    setSession(data.user, data);
+    onAuthed();
+  }catch(_err){ /* apiFetch already toasted the error */ }
+}
+function skipAuth(){
+  document.getElementById('authOverlay').classList.remove('show');
+  toast('Browsing without an account — log in from the Me tab to buy, post, or go live');
+  loadListings(); loadFeed();
+  maybeAutoOpenBot('guest');
+}
+function onAuthed(){
+  document.getElementById('authOverlay').classList.remove('show');
+  toast(`Welcome, ${currentUser.handle}!`);
+  loadListings(); loadFeed(); loadNotifications(); loadCollection(); loadAchievements(); loadConversations();
+  connectSocket();
+  loadPayoutStatus();
+  loadModSettings();
+  maybeAutoOpenBot(currentUser.handle);
+}
+// Only auto-plays the welcome rundown once per identity (guest or a given
+// handle) — a returning visitor shouldn't hear the same speech every reload.
+// The 🤖 Ask SwanyBot FAB always reopens it manually, voice included.
+function maybeAutoOpenBot(identityKey){
+  const seenKey = 'kmWelcomeSeen:' + identityKey;
+  if(localStorage.getItem(seenKey)) return;
+  localStorage.setItem(seenKey, '1');
+  setTimeout(openBot, 400);
+}
+
+const marbleIcons = ['🔮','💠','🌀','🟣','🟠','🔵','⚪','🟢'];
+// listings now comes from the real API (GET /api/listings) instead of a static
+// seed array — see loadListings() below. Local fields are the raw API row
+// shape: id, name, description, category, grade, type, price_cents, status,
+// seller_handle, seller_id, current_bid_cents, ends_at.
+let listings = [];
+const grid = document.getElementById('market-grid');
+function fmtTime(s){ const m=Math.floor(s/60), sec=s%60; return `${m}:${sec.toString().padStart(2,'0')}`; }
+let currentMarketFilter = 'all';
+
+async function loadListings(filter = currentMarketFilter){
+  currentMarketFilter = filter;
+  const q = (document.getElementById('marketSearch')?.value || '').trim();
+  const params = new URLSearchParams();
+  if(filter && filter !== 'all') params.set(filter === 'Auction' ? 'type' : 'category', filter === 'Auction' ? 'auction' : filter);
+  if(q) params.set('q', q);
+  try{
+    listings = await apiFetch(`/api/listings?${params.toString()}`);
+  }catch(_err){
+    listings = []; // apiFetch already toasted the connection/error
+  }
+  renderMarket();
+  renderMyListings();
+}
+
+function renderMarket(){
+  grid.innerHTML='';
+  listings.forEach((l,i)=>{
+    const el = document.createElement('div');
+    el.className='card'+(l.type==='auction'?' auction':'');
+    const priceHtml = l.type==='trade' ? '<span class="price">Trade only</span>'
+      : l.type==='auction' ? `<span class="price">$${((l.current_bid_cents||0)/100).toFixed(2)} bid</span>`
+      : `<span class="price">$${((l.price_cents||0)/100).toFixed(2)}</span>`;
+    const secsLeft = l.type==='auction' && l.ends_at ? Math.max(0, Math.floor((new Date(l.ends_at) - Date.now())/1000)) : null;
+    el.innerHTML = `
+      <div class="thumb" style="background:${bgFor(i)}">
+        <span class="badge ${l.type==='trade'?'trade':''}">${l.type==='trade'?'Trade':l.type==='auction'?'Auction':'For Sale'}</span>
+        <span class="grade ${l.grade}">${l.grade.replace('-',' ')}</span>
+        <span class="share-btn" onclick="event.stopPropagation(); openShare('${l.name.replace(/'/g,"\\'")}')">⤴</span>
+        <span class="report-btn" onclick="event.stopPropagation(); openReport('listing','${l.name.replace(/'/g,"\\'")}','${l.id}')">⚠️</span>
+        ${marbleIcons[i % marbleIcons.length]}
+      </div>
+      <div class="body">
+        <div class="type-tag">${l.category}</div>
+        <div class="title">${l.name}</div>
+        <div class="meta">${l.description || ''}</div>
+        ${l.type==='auction' ? `<div class="auction-timer">⏱ <span class="ac-time" data-ends="${secsLeft}">${fmtTime(secsLeft)}</span> left</div>` : ''}
+        <div class="row">
+          ${priceHtml}
+          <span class="seller"><span class="dot"></span>${l.seller_handle}</span>
+        </div>
+        ${l.type==='auction' ? `<button class="bid-btn" onclick="event.stopPropagation(); placeBid('${l.id}')">Place Bid</button>` : ''}
+        <button class="add-col-btn" onclick="event.stopPropagation(); addToCollection(this,'${l.name.replace(/'/g,"\\'")}', '${marbleIcons[i % marbleIcons.length]}', ${l.type==='auction'?(l.current_bid_cents||0):(l.price_cents||0)}, '${l.id}')">＋ Add to Collection</button>
+      </div>`;
+    el.querySelector('.seller').onclick = (e)=>{ e.stopPropagation(); openProfile(l.seller_handle); };
+    el.onclick=()=>openDealRoom(l, marbleIcons[i % marbleIcons.length], bgFor(i));
+    grid.appendChild(el);
+  });
+}
+function bgFor(i){
+  const grads = [
+    'radial-gradient(circle,#3a241a,#171110)',
+    'radial-gradient(circle,#33202a,#171110)',
+    'radial-gradient(circle,#1f2a33,#171110)',
+    'radial-gradient(circle,#2a3320,#171110)',
+  ];
+  return grads[i % grads.length];
+}
+function filterMarket(cat, chipEl){
+  document.querySelectorAll('#marketFilters .chip').forEach(c=>c.classList.remove('on'));
+  chipEl.classList.add('on');
+  loadListings(cat);
+}
+let _searchDebounce = null;
+function debouncedSearch(){
+  clearTimeout(_searchDebounce);
+  _searchDebounce = setTimeout(()=> loadListings(currentMarketFilter), 350);
+}
+async function placeBid(listingId){
+  if(!authToken){ toast('Log in to place a bid'); document.getElementById('authOverlay').classList.add('show'); return; }
+  const listing = listings.find(l=>l.id===listingId);
+  const nextBid = (listing?.current_bid_cents || 0) + 500; // matches the server's default min_increment_cents
+  try{
+    const res = await apiFetch(`/api/listings/${listingId}/bids`, { method:'POST', body: JSON.stringify({ amountCents: nextBid }) });
+    toast(`You bid $${(res.currentBidCents/100).toFixed(2)} — highest bidder!`);
+    loadListings();
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+loadListings();
+setInterval(()=>{
+  document.querySelectorAll('.ac-time').forEach(t=>{
+    let s = parseInt(t.dataset.ends) - 1;
+    if(s < 0) s = 0;
+    t.dataset.ends = s;
+    t.textContent = fmtTime(s);
+  });
+}, 1000);
+
+/* ---- LEADERBOARD ---- */
+let leaders = [];
+async function loadLeaderboard(){
+  try{
+    leaders = await apiFetch('/api/battles/leaderboard');
+  }catch(_err){ leaders = []; }
+  document.getElementById('leaderboardList').innerHTML = leaders.map((l,i)=>`
+    <div class="lb-row"><span class="lb-rank">#${i+1}</span><span class="lb-name">${l.handle}</span><span class="lb-pts">${(l.points||0).toLocaleString()} pts</span></div>
+  `).join('') || '<div class="wp-note">No battles yet — be the first to challenge someone!</div>';
+}
+async function loadCollectionLeaderboard(){
+  const wrap = document.getElementById('collectionLeaderboard');
+  try{
+    const rows = await apiFetch('/api/collection/leaderboard');
+    wrap.innerHTML = rows.length ? rows.map((r,i)=>`
+      <div class="col-lb-row">
+        <span class="r">#${i+1}</span>
+        <span class="h" onclick="openProfile('${r.handle.replace(/'/g,"\\'")}')">${r.handle}<span class="ic2">${r.item_count} marble${r.item_count===1?'':'s'}</span></span>
+        <span class="iv">$${(r.total_value_cents/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+      </div>`).join('') : '<div class="wp-note">No public collections yet — be the first to add marbles!</div>';
+  }catch(_err){
+    wrap.innerHTML = '<div class="wp-note">Couldn\'t load the leaderboard right now.</div>';
+  }
+}
+loadCollectionLeaderboard();
+async function featureMyCollection(){
+  if(!authToken){ toast('Log in to feature your collection'); document.getElementById('authOverlay').classList.add('show'); return; }
+  if(!myCollection.length){ toast('Add a few marbles to your collection first'); return; }
+  const totalCents = myCollection.reduce((a,m)=>a+(m.value||0),0);
+  const top3 = myCollection.slice(0,3).map(m=>`${m.icon} ${m.name}`).join(', ');
+  const text = `Check out my collection: ${myCollection.length} marbles worth $${(totalCents/100).toFixed(2)}, including ${top3}. 🏆`;
+  try{
+    await apiFetch('/api/feed', { method:'POST', body: JSON.stringify({ text }) });
+    toast('Your collection is now featured on the community feed!');
+    unlockAch('posted');
+    loadFeed();
+    switchToView('feed');
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+
+loadLeaderboard();
+
+/* ---- COLLECTION ---- */
+let myCollection = [];
+async function loadCollection(){
+  if(!authToken){ myCollection = []; renderCollection(); return; }
+  try{
+    const rows = await apiFetch('/api/collection');
+    myCollection = rows.map(r=>({ id:r.id, name:r.name, icon:r.icon, value:r.est_value_cents }));
+  }catch(_err){ myCollection = []; }
+  renderCollection();
+}
+async function addToCollection(btn, name, icon, valueCents, listingId){
+  if(!authToken){ toast('Log in to build your collection'); document.getElementById('authOverlay').classList.add('show'); return; }
+  if(myCollection.find(m=>m.name===name)){ toast(`${name} is already in your collection`); return; }
+  try{
+    const row = await apiFetch('/api/collection', { method:'POST', body: JSON.stringify({ name, icon, estValueCents: valueCents, acquiredVia: listingId || null }) });
+    myCollection.push({ id:row.id, name:row.name, icon:row.icon, value:row.est_value_cents });
+    btn.textContent = '✓ Added';
+    btn.classList.add('added');
+    toast(`${name} added to your collection`);
+    renderCollection();
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+async function removeFromCollection(id){
+  try{
+    await apiFetch(`/api/collection/${id}`, { method:'DELETE' });
+    myCollection = myCollection.filter(m=>m.id!==id);
+    renderCollection();
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+function renderCollection(){
+  const g = document.getElementById('collection-grid');
+  const empty = document.getElementById('collectionEmpty');
+  g.innerHTML = myCollection.map(m=>`
+    <div class="col-card">
+      <button class="rm" onclick="removeFromCollection('${m.id}')">✕</button>
+      <div class="ic">${m.icon}</div>
+      <div class="nm">${m.name}</div>
+      <div class="vl">$${((m.value||0)/100).toFixed(2)}</div>
+    </div>`).join('');
+  empty.style.display = myCollection.length ? 'none' : 'block';
+  document.getElementById('colCount').textContent = myCollection.length;
+  const totalCents = myCollection.reduce((a,m)=>a+(m.value||0),0);
+  document.getElementById('colValue').textContent = '$' + (totalCents/100).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+  document.getElementById('colRank').textContent = totalCents > 50000 ? 'Rising Collector' : totalCents > 0 ? 'New Collector' : 'Unranked';
+  renderBadges();
+  refreshPostAttachOptions();
+  loadCollectionLeaderboard();
+}
+renderCollection();
+
+/* ---- GLOSSARY ---- */
+const glossary = [
+  {ic:"🌀", nm:"Swirl", d:"Handmade marbles with colored glass ribbons twisted through a clear or colored base — the most collected vintage style."},
+  {ic:"💠", nm:"Sulphide", d:"Clear glass marbles with a figurine (animal, person, or object) sealed inside — prized for rarity and craftsmanship."},
+  {ic:"🐱", nm:"Cat's Eye", d:"Machine-made marbles with a vane of color shaped like an eye, injected into a clear glass base — a schoolyard classic."},
+  {ic:"⚪", nm:"Aggie", d:"Originally carved from agate stone; now refers to any hard, durable shooter marble used in games."},
+  {ic:"🌊", nm:"Oxblood", d:"A rich, dark red swirl style made by Christensen Agate Co. in the 1920s-30s — one of the most sought-after colors."},
+  {ic:"👑", nm:"Lutz", d:"Marbles with copper-flecked glass bands that shimmer gold — named after German glassmaker Nicholas Lutz."},
+  {ic:"🌪️", nm:"Corkscrew", d:"Two or more colored ribbons twisted in a spiral down the length of the marble, like a barber pole."},
+  {ic:"🫧", nm:"Clambroth", d:"Opaque marbles, usually white or colored base, with thin evenly-spaced colored lines circling the surface."},
+];
+document.getElementById('glossaryList').innerHTML = glossary.map((g,i)=>`
+  <div class="gloss-item" id="gl-${i}">
+    <div class="gloss-head" onclick="toggleGloss(${i})">
+      <span class="ic">${g.ic}</span><span class="nm">${g.nm}</span><span class="car">▶</span>
+    </div>
+    <div class="gloss-body"><p>${g.d}</p></div>
+  </div>`).join('');
+function toggleGloss(i){ document.getElementById('gl-'+i).classList.toggle('open'); }
+
+/* ---- MARBLE VIDEOS ---- */
+const marbleVideos = [
+  { id:'1PuJiySGOcs', title:'Marbles World Championships on Trans World Sport', src:'Trans World Sport' },
+  { id:'DNMyQJeqA7E', title:'The Marbles World Championships 2023', src:'YouTube' },
+  { id:'IM0g1pzKawg', title:'25 Antique & Vintage Marbles and What They Sold For', src:'YouTube' },
+  { id:'_meC9zO7Yqs', title:'The Top 10 Marbles Of The Marble Universe (Part 1)', src:'Marble Universe' },
+  { id:'By4yxXtxPAQ', title:'Top 10 Highest Selling Machine-Made Marbles on eBay', src:'YouTube' },
+  { id:'86xJcEk9y2E', title:'15 Rarest and Most Valuable Marbles Ever Sold', src:'YouTube' },
+  { id:'fTXU_2yep9w', title:'Top 5 Most Expensive Marbles In The World', src:'YouTube' },
+];
+function renderVideos(){
+  document.getElementById('videoGrid').innerHTML = marbleVideos.map((v,i)=>`
+    <div class="video-card" onclick="openVideoModal(${i})">
+      <div class="vthumb">🎬<span class="play">▶</span></div>
+      <div class="vbody">
+        <div class="vtitle">${v.title}</div>
+        <div class="vsrc">${v.src}</div>
+      </div>
+    </div>`).join('');
+}
+function openVideoModal(i){
+  const v = marbleVideos[i];
+  document.getElementById('videoModalTitle').textContent = v.title;
+  document.getElementById('videoPlayerWrap').innerHTML = `<iframe src="https://www.youtube.com/embed/${v.id}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen style="width:100%; aspect-ratio:16/9; border:none; border-radius:10px;"></iframe>`;
+  document.getElementById('videoOverlay').classList.add('show');
+}
+function closeVideoModal(){
+  document.getElementById('videoPlayerWrap').innerHTML = ''; // stops playback
+  document.getElementById('videoOverlay').classList.remove('show');
+}
+document.getElementById('videoOverlay').addEventListener('click', e=>{ if(e.target.id==='videoOverlay') closeVideoModal(); });
+renderVideos();
+
+/* ---- MARBLE TRIVIA QUIZ ---- */
+const quizQuestions = [
+  { q:"What gives a Cat's Eye marble its name?", opts:["The vane of color shaped like an eye","It's made from real feline glass","It has two dots painted on","It glows in the dark"], a:0 },
+  { q:"Which era are true handmade German swirl marbles generally from?", opts:["1990s–2000s", "1840s–1920s", "2010s", "1960s only"], a:1 },
+  { q:"What's inside a Sulphide marble?", opts:["Air bubbles only","A sealed figurine","Liquid glass","Nothing, it's solid color"], a:1 },
+  { q:"What material were the very first marbles typically made from, before glass?", opts:["Plastic","Fired clay or stone","Rubber","Wood"], a:1 },
+  { q:"In marble slang, what is a 'shooter'?", opts:["A tiny peewee marble","The larger marble used to shoot with","A cracked marble","A trade-only marble"], a:1 },
+  { q:"What does an Oxblood swirl's color usually resemble?", opts:["Bright yellow","Deep, dark red","Pale green","Sky blue"], a:1 },
+  { q:"What's a Corkscrew marble named for?", opts:["Its spiral color pattern","Its shape, like a bottle opener","Where it was found","Its inventor's last name"], a:0 },
+];
+let quizIdx = 0, quizScore = 0, quizAnswered = false;
+function renderQuiz(){
+  const card = document.getElementById('quizCard');
+  if(quizIdx >= quizQuestions.length){
+    card.innerHTML = `
+      <div class="quiz-done">
+        <div class="score">${quizScore}/${quizQuestions.length}</div>
+        <div style="color:var(--text-dim); margin-bottom:6px;">${quizScore===quizQuestions.length ? "Perfect score — true collector!" : "Nice run — brush up in the glossary above."}</div>
+        <button class="quiz-restart" onclick="restartQuiz()">↻ Try Again</button>
+      </div>`;
+    if(quizScore >= Math.ceil(quizQuestions.length*0.7)) unlockAch('quizWhiz');
+    if(quizScore > parseInt(localStorage.getItem('kmQuizBest')||'0')) localStorage.setItem('kmQuizBest', quizScore);
+    renderDashboardStats();
+    return;
+  }
+  const step = quizQuestions[quizIdx];
+  quizAnswered = false;
+  card.innerHTML = `
+    <div class="quiz-progress">Question ${quizIdx+1} of ${quizQuestions.length} · Score: ${quizScore}</div>
+    <div class="quiz-question">${step.q}</div>
+    <div class="quiz-options">${step.opts.map((o,i)=>`<button class="quiz-opt" onclick="answerQuiz(${i})">${o}</button>`).join('')}</div>`;
+}
+function answerQuiz(choice){
+  if(quizAnswered) return;
+  quizAnswered = true;
+  const step = quizQuestions[quizIdx];
+  const opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach((el,i)=>{
+    el.disabled = true;
+    if(i===step.a) el.classList.add('correct');
+    else if(i===choice) el.classList.add('wrong');
+  });
+  if(choice===step.a) quizScore++;
+  setTimeout(()=>{ quizIdx++; renderQuiz(); }, 900);
+}
+function restartQuiz(){ quizIdx=0; quizScore=0; renderQuiz(); }
+
+/* ---- SPEED ID GAME ---- */
+let speedScore = 0, speedTimeLeft = 0, speedTimer = null, speedRound = null;
+let speedBest = parseInt(localStorage.getItem('kmSpeedBest') || '0');
+function renderSpeedBest(){ document.getElementById('speedBest').textContent = speedBest; }
+renderSpeedBest();
+function startSpeedGame(){
+  speedScore = 0;
+  nextSpeedRound();
+}
+function nextSpeedRound(){
+  clearInterval(speedTimer);
+  const correct = glossary[Math.floor(Math.random()*glossary.length)];
+  const wrongPool = glossary.filter(g=>g.nm!==correct.nm);
+  const wrongs = [];
+  while(wrongs.length < 3 && wrongPool.length){
+    const pick = wrongPool.splice(Math.floor(Math.random()*wrongPool.length),1)[0];
+    wrongs.push(pick.nm);
+  }
+  const options = [correct.nm, ...wrongs].sort(()=>Math.random()-0.5);
+  speedRound = { correct: correct.nm, icon: correct.ic };
+  speedTimeLeft = 6000; // ms
+  renderSpeedRound(options);
+  speedTimer = setInterval(()=>{
+    speedTimeLeft -= 100;
+    const fill = document.getElementById('speedFill');
+    if(fill) fill.style.width = Math.max(0,(speedTimeLeft/6000)*100) + '%';
+    if(speedTimeLeft <= 0){ endSpeedGame(); }
+  }, 100);
+}
+function renderSpeedRound(options){
+  document.getElementById('speedCard').innerHTML = `
+    <div class="speed-streak">Score: ${speedScore} &nbsp;·&nbsp; Best: ${speedBest}</div>
+    <div class="speed-timer-bar"><div class="speed-timer-fill" id="speedFill" style="width:100%"></div></div>
+    <div class="speed-icon">${speedRound.icon}</div>
+    <div class="quiz-options">${options.map(o=>`<button class="quiz-opt" onclick="answerSpeed('${o.replace(/'/g,"\\'")}', this)">${o}</button>`).join('')}</div>`;
+}
+function answerSpeed(choice, btn){
+  clearInterval(speedTimer);
+  const correct = choice === speedRound.correct;
+  document.querySelectorAll('#speedCard .quiz-opt').forEach(el=>{
+    el.disabled = true;
+    if(el.textContent === speedRound.correct) el.classList.add('correct');
+    else if(el===btn) el.classList.add('wrong');
+  });
+  if(correct){ speedScore++; setTimeout(nextSpeedRound, 500); }
+  else { setTimeout(endSpeedGame, 500); }
+}
+function endSpeedGame(){
+  clearInterval(speedTimer);
+  if(speedScore > speedBest){
+    speedBest = speedScore;
+    localStorage.setItem('kmSpeedBest', speedBest);
+    renderDashboardStats();
+    renderSpeedBest();
+  }
+  document.getElementById('speedCard').innerHTML = `
+    <div class="quiz-done">
+      <div class="score">${speedScore}</div>
+      <div style="color:var(--text-dim); margin-bottom:6px;">${speedScore > 0 && speedScore === speedBest ? "New personal best! 🎉" : "Correct IDs in a row"}</div>
+      <button class="quiz-restart" onclick="startSpeedGame()">↻ Play Again</button>
+    </div>`;
+  if(speedScore >= 5) unlockAch('quizWhiz');
+}
+function renderSpeedStart(){
+  document.getElementById('speedCard').innerHTML = `
+    <div style="text-align:center; color:var(--text-dim); margin-bottom:12px; font-size:13.5px;">6 seconds per marble — how many can you name in a row?</div>
+    <button class="speed-start-btn" onclick="startSpeedGame()">▶ Start</button>`;
+}
+renderSpeedStart();
+renderQuiz();
+
+let panels = [];
+const pgrid = document.getElementById('panel-grid');
+async function loadPanels(filter = 'all'){
+  try{
+    const status = filter==='live' ? 'live' : filter==='upcoming' ? 'scheduled' : undefined;
+    const q = status ? `?status=${status}` : '';
+    panels = await apiFetch(`/api/rooms${q}`);
+  }catch(_err){ panels = []; }
+  renderPanels();
+}
+function renderPanels(){
+  pgrid.innerHTML='';
+  if(!panels.length){
+    pgrid.innerHTML = '<div class="wp-note">No panels yet — be the first to go live!</div>';
+    return;
+  }
+  panels.forEach(p=>{
+    const el = document.createElement('div');
+    el.className='panel-card';
+    const isLive = p.status==='live';
+    const when = p.scheduled_for ? new Date(p.scheduled_for).toLocaleString(undefined,{weekday:'short',hour:'numeric',minute:'2-digit'}) : '';
+    el.innerHTML = `
+      <div class="panel-video">
+        <span class="${isLive?'live-pill':'live-pill upcoming-pill'}">${isLive?'LIVE':'UPCOMING'}</span>
+        <span class="share-btn" onclick="event.stopPropagation(); openShare('${p.title.replace(/'/g,"\\'")}')">⤴</span>
+        <span class="report-btn" onclick="event.stopPropagation(); openReport('panel','${p.title.replace(/'/g,"\\'")}','${p.id}')">⚠️</span>
+        ${isLive?`<span class="viewers">👁 ${p.guest_count||0}</span>`:`<span class="viewers">${when}</span>`}
+      </div>
+      <div class="panel-info">
+        <div class="cat">${p.category||'General'}</div>
+        <div class="title">${p.title}</div>
+        <div class="host-row">🎙️ Hosted by <span style="text-decoration:underline; cursor:pointer;" onclick="event.stopPropagation(); openProfile('${p.host_handle.replace(/'/g,"\\'")}')">${p.host_handle}</span><span class="cap">${p.guest_count||0}/${p.max_guests}</span></div>
+        <button class="join-btn">${isLive?'Join Panel':'Remind Me'}</button>
+      </div>`;
+    el.querySelector('.join-btn').onclick= async ()=>{
+      if(!isLive){ toast(`We'll remind you before "${p.title}" starts`); return; }
+      if(!authToken){ toast('Log in to join a panel'); document.getElementById('authOverlay').classList.add('show'); return; }
+      try{ await apiFetch(`/api/rooms/${p.id}/join`, { method:'POST' }); }catch(_err){}
+      openLiveRoom({ id:p.id, title:p.title, host:p.host_handle, guests:[] }, false);
+    };
+    pgrid.appendChild(el);
+  });
+}
+function filterPanels(f, chipEl){
+  document.querySelectorAll('#view-panels .filters .chip').forEach(c=>c.classList.remove('on'));
+  chipEl.classList.add('on');
+  loadPanels(f);
+}
+loadPanels();
+
+const battles = [
+  {a:"GlassTrader", b:"SwirlKing", pa:60},
+  {a:"PorchTrader", b:"AntiqueGlass", pa:35},
+  {a:"HotShopArt", b:"MarbleMike", pa:72},
+];
+const blist = document.getElementById('battle-list');
+battles.forEach(b=>{
+  const el = document.createElement('div');
+  el.className='mini-battle';
+  el.innerHTML = `
+    <div class="row"><span class="names">${b.a}</span><span class="names">${b.b}</span></div>
+    <div class="mini-meter">
+      <div style="width:${b.pa}%;background:linear-gradient(90deg,var(--terracotta),#e0997a)"></div>
+      <div style="width:${100-b.pa}%;background:linear-gradient(90deg,var(--burgundy-l),var(--burgundy))"></div>
+    </div>
+    <div class="timer" style="margin:0;">⏱ ${Math.floor(Math.random()*8)+1}m left</div>
+  `;
+  el.onclick=()=>toast(`Watching ${b.a} vs ${b.b}`);
+  el.style.cursor='pointer';
+  blist.appendChild(el);
+});
+
+let scoreA=1240, scoreB=980;
+let currentBattleId = null; // set by startArenaBattle() when a real backend battle is behind the arena
+async function sendGift(side, val, giftName){
+  if(side==='a'){ scoreA+=val; } else { scoreB+=val; }
+  document.getElementById('scoreA').textContent = scoreA.toLocaleString();
+  document.getElementById('scoreB').textContent = scoreB.toLocaleString();
+  const total = scoreA+scoreB;
+  const pctA = Math.round((scoreA/total)*100);
+  document.getElementById('meterA').style.width = pctA+'%';
+  document.getElementById('meterB').style.width = (100-pctA)+'%';
+  toast(`Gift sent! +${val} to ${side==='a'?document.getElementById('fighterAName').textContent:document.getElementById('fighterBName').textContent}`);
+  if(currentBattleId && authToken){
+    try{
+      await apiFetch(`/api/battles/${currentBattleId}/gift`, { method:'POST', body: JSON.stringify({
+        side: side==='a' ? 'challenger' : 'opponent', giftName: giftName || 'Gift', points: val
+      })});
+    }catch(_err){ /* apiFetch already toasted — local score display still updated above */ }
+  }
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ---- BROADCAST SETUP ---- */
+function openBroadcastSetup(){
+  if(!authToken){ toast('Log in to go live'); document.getElementById('authOverlay').classList.add('show'); return; }
+  document.getElementById('setupOverlay').classList.add('show');
+  requestPreviewMedia();
+}
+function closeSetup(){
+  document.getElementById('setupOverlay').classList.remove('show');
+  stopPreviewMedia();
+}
+document.getElementById('setupOverlay').addEventListener('click', e=>{ if(e.target.id==='setupOverlay') closeSetup(); });
+async function startBroadcast(){
+  const title = document.getElementById('setupTitle').value || "My Live Stream";
+  const format = document.getElementById('setupFormat').value;
+  const platforms = [...document.querySelectorAll('#platformRow .platform-chip.on')].map(c=>c.textContent.trim());
+  stopPreviewMedia();
+  document.getElementById('setupOverlay').classList.remove('show');
+  toast(`Going live to ${platforms.length} platform${platforms.length!==1?'s':''}…`);
+  try{
+    const room = await apiFetch('/api/rooms', { method:'POST', body: JSON.stringify({ title, category: format, goLiveNow: true }) });
+    openLiveRoom({ id:room.id, title:room.title, host: currentUser.handle, guests:[] }, true);
+    unlockAch('wentLive');
+    logActivity('📡', `Went live: "${title}"`);
+    loadPanels();
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+
+/* ---- REAL CAMERA / MIC ACCESS ---- */
+let myStream = null;
+let previewStream = null;
+
+function mediaSupported(){
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+}
+function permMessage(err){
+  if(!mediaSupported()) return "Camera/mic isn't available in this browser context.";
+  if(err && (err.name==='NotAllowedError' || err.name==='SecurityError')) return "Camera & mic access was blocked. Allow permissions to go live.";
+  if(err && err.name==='NotFoundError') return "No camera or microphone found on this device.";
+  return "Couldn't access camera/mic here — this connects live once deployed to your own domain.";
+}
+
+async function requestPreviewMedia(){
+  const video = document.getElementById('setupVideo');
+  const fb = document.getElementById('setupFallback');
+  try{
+    previewStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+    video.srcObject = previewStream;
+    video.style.display='block';
+    fb.style.display='none';
+  }catch(err){
+    video.style.display='none';
+    fb.style.display='flex';
+    fb.innerHTML = `🎥<div class="perm-msg">${permMessage(err)}</div><button class="perm-btn" onclick="requestPreviewMedia()">Allow Camera & Mic</button>`;
+  }
+}
+function stopPreviewMedia(){
+  if(previewStream){ previewStream.getTracks().forEach(t=>t.stop()); previewStream=null; }
+}
+
+async function requestMedia(constraints){
+  const video = document.getElementById('myVideo');
+  const fb = document.getElementById('myFallback');
+  if(!video) return;
+  try{
+    if(myStream){ myStream.getTracks().forEach(t=>t.stop()); }
+    myStream = await navigator.mediaDevices.getUserMedia(constraints || {video:true, audio:true});
+    video.srcObject = myStream;
+    video.style.display='block';
+    fb.style.display='none';
+    toast('Camera & mic connected');
+    // reflect current mic/cam button states onto the new stream
+    const micOff = document.getElementById('micBtn')?.classList.contains('off');
+    const camOff = document.getElementById('camBtn')?.classList.contains('off');
+    if(micOff) myStream.getAudioTracks().forEach(t=>t.enabled=false);
+    if(camOff) myStream.getVideoTracks().forEach(t=>t.enabled=false);
+  }catch(err){
+    myStream = null;
+    video.style.display='none';
+    fb.style.display='flex';
+    fb.innerHTML = `🚫<div class="perm-msg">${permMessage(err)}</div><button class="perm-btn" onclick="requestMedia()">Allow Camera & Mic</button>`;
+  }
+}
+async function switchCamSource(val){
+  if(val==='remote'){
+    toast('Requesting camera control from guest…');
+  } else {
+    toast('Switching camera…');
+    requestMedia({video:{facingMode: val}, audio:true});
+  }
+}
+
+let myCamStream = null;
+let sharingScreen = false;
+async function toggleScreenShare(){
+  const video = document.getElementById('myVideo');
+  const fb = document.getElementById('myFallback');
+  const btn = document.getElementById('screenBtn');
+  const tag = document.getElementById('myScreenTag');
+  if(!sharingScreen){
+    try{
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({video:true, audio:false});
+      myCamStream = myStream;
+      myStream = screenStream;
+      video.srcObject = screenStream;
+      video.style.display='block';
+      fb.style.display='none';
+      sharingScreen = true;
+      btn.classList.add('active');
+      tag.style.display='inline-block';
+      document.getElementById('myTile').classList.add('sharing');
+      toast('You started sharing your screen');
+      screenStream.getVideoTracks()[0].addEventListener('ended', stopScreenShare);
+    }catch(err){
+      toast('Screen share was blocked or cancelled');
+    }
+  } else {
+    stopScreenShare();
+  }
+}
+function stopScreenShare(){
+  if(!sharingScreen) return;
+  if(myStream){ myStream.getTracks().forEach(t=>t.stop()); }
+  myStream = myCamStream;
+  myCamStream = null;
+  sharingScreen = false;
+  const btn = document.getElementById('screenBtn');
+  const tag = document.getElementById('myScreenTag');
+  if(btn) btn.classList.remove('active');
+  if(tag) tag.style.display='none';
+  const myTile = document.getElementById('myTile');
+  if(myTile) myTile.classList.remove('sharing');
+  const video = document.getElementById('myVideo');
+  const fb = document.getElementById('myFallback');
+  if(myStream && video){
+    video.srcObject = myStream;
+    video.style.display='block';
+    if(fb) fb.style.display='none';
+  } else if(video){
+    video.style.display='none';
+    if(fb) fb.style.display='flex';
+  }
+  toast('Screen share stopped');
+}
+
+/* ---- LIVE ROOM (shared by Panels + Broadcast) ---- */
+let lrViewerTimer=null, lrViewerCount=1, lrIsHost=false, currentRoomId=null;
+function openLiveRoom(p, isHost){
+  lrIsHost = isHost;
+  currentRoomId = p.id || null;
+  document.getElementById('lrTitle').textContent = p.title;
+  lrViewerCount = isHost ? 1 : p.viewers || 1;
+  document.getElementById('lrViewers').textContent = lrViewerCount.toLocaleString();
+
+  const stage = document.getElementById('lrStage');
+  stage.innerHTML = '';
+  if(isHost){
+    addMyTile(p.host || "You (Host)", true);
+  } else {
+    addTile(p.host, true);
+    addMyTile("You", false);
+  }
+  (p.guests||[]).forEach(g=> addTile(g, false));
+
+  const controls = document.getElementById('lrControls');
+  controls.innerHTML = `
+    <button class="lr-btn" id="micBtn" onclick="toggleCtl('micBtn','Mic')">🎤</button>
+    <button class="lr-btn" id="camBtn" onclick="toggleCtl('camBtn','Camera')">📷</button>
+    <button class="lr-btn" id="screenBtn" onclick="toggleScreenShare()">🖥️</button>
+    <button class="lr-btn" id="wpBtn" onclick="toggleWatchParty()">📺</button>
+    <button class="lr-btn" onclick="lrReact('🙋')">🙋</button>
+    <button class="lr-btn" onclick="lrReact(['❤️','👏','🔥','😂'][Math.floor(Math.random()*4)])">😊</button>
+    ${!isHost ? `<button class="lr-btn" onclick="openTipModal()" title="Send a tip">💰</button>` : ''}
+    ${isHost ? `
+      <select class="cam-select" onchange="switchCamSource(this.value)">
+        <option value="user">Front Camera</option><option value="environment">Back Camera</option><option value="remote">Remote Guest Camera</option>
+      </select>
+      <button class="lr-btn host-only" onclick="toggleStageLayout()" id="layoutBtn" title="Toggle layout">▦</button>
+      <button class="lr-btn host-only" onclick="openInviteGuest()">🔗 Invite</button>
+      <button class="lr-btn host-only" onclick="inviteGuest()">➕</button>
+      <button class="lr-btn leave" onclick="leaveRoom()">⏹ End Stream</button>
+    ` : `
+      <button class="lr-btn leave" onclick="leaveRoom()">🚪 Leave</button>
+    `}
+  `;
+
+  document.getElementById('liveRoom').classList.add('show');
+  seedLrChat(p.title);
+  requestMedia();
+  resetWatchParty();
+  document.getElementById('lrStage').style.display = 'grid';
+  if(socket && currentRoomId){ socket.emit('room:join', { roomId: currentRoomId }); }
+  clearInterval(lrViewerTimer);
+  lrViewerTimer = setInterval(()=>{
+    lrViewerCount += Math.floor(Math.random()*5);
+    document.getElementById('lrViewers').textContent = lrViewerCount.toLocaleString();
+  }, 3000);
+}
+function addTile(label, isHostTile){
+  const stage = document.getElementById('lrStage');
+  const tile = document.createElement('div');
+  tile.className = 'lr-tile' + (isHostTile ? ' host' : '');
+  const hostControls = (lrIsHost && !isHostTile) ? `
+    <div class="tile-host-ctrls">
+      <button title="Mute this guest" onclick="event.stopPropagation(); toggleGuestMic(this)">🎤</button>
+      <button title="Turn off this guest's camera" onclick="event.stopPropagation(); toggleGuestCam(this)">📷</button>
+      <button title="Remove from stage" onclick="event.stopPropagation(); removeGuestTile(this)">✕</button>
+    </div>` : '';
+  tile.innerHTML = `${/\p{Emoji}/u.test(label) ? label.match(/\p{Emoji}/u)[0] : '👤'}<span class="tag">${label}</span><span class="mstat">🎤</span><button class="tile-screen-btn" title="Simulate screen share" onclick="event.stopPropagation(); toggleGuestScreen(this)">🖥️</button>${hostControls}`;
+  stage.appendChild(tile);
+}
+function addMyTile(label, isHostTile){
+  const stage = document.getElementById('lrStage');
+  const tile = document.createElement('div');
+  tile.id = 'myTile';
+  tile.className = 'lr-tile' + (isHostTile ? ' host' : '');
+  tile.innerHTML = `
+    <video id="myVideo" autoplay muted playsinline style="display:none; width:100%; height:100%; object-fit:cover; position:absolute; inset:0; border-radius:12px;"></video>
+    <div id="myFallback" style="display:flex; flex-direction:column; align-items:center; gap:4px; z-index:1;">👤</div>
+    <span class="screen-tag" id="myScreenTag">SCREEN</span>
+    <span class="tag">${label}</span><span class="mstat" id="myMicStat">🎤</span>`;
+  stage.appendChild(tile);
+}
+function toggleGuestMic(btn){
+  const tile = btn.closest('.lr-tile');
+  const muted = btn.classList.toggle('active');
+  const mstat = tile.querySelector('.mstat');
+  if(mstat) mstat.textContent = muted ? '🔇' : '🎤';
+  if(mstat) mstat.classList.toggle('off', muted);
+  const name = tile.querySelector('.tag').dataset.orig || tile.querySelector('.tag').textContent;
+  toast(`${name} ${muted ? 'muted' : 'unmuted'}`);
+  if(socket && currentRoomId) socket.emit('room:chat', { roomId: currentRoomId, text: `(host ${muted?'muted':'unmuted'} a guest)`, lang:'en' });
+}
+function toggleGuestCam(btn){
+  const tile = btn.closest('.lr-tile');
+  const off = btn.classList.toggle('active');
+  const name = tile.querySelector('.tag').dataset.orig || tile.querySelector('.tag').textContent;
+  toast(`${name}'s camera turned ${off ? 'off' : 'on'}`);
+}
+function removeGuestTile(btn){
+  const tile = btn.closest('.lr-tile');
+  const name = tile.querySelector('.tag').dataset.orig || tile.querySelector('.tag').textContent;
+  tile.remove();
+  toast(`${name} was removed from the stage`);
+}
+function toggleStageLayout(){
+  const stage = document.getElementById('lrStage');
+  const spotlight = stage.classList.toggle('spotlight');
+  document.getElementById('layoutBtn').textContent = spotlight ? '▥' : '▦';
+  toast(spotlight ? 'Spotlight layout' : 'Grid layout');
+}
+function toggleGuestScreen(btn){
+  const tile = btn.closest('.lr-tile');
+  const sharing = tile.classList.toggle('sharing');
+  const nameTag = tile.querySelector('.tag');
+  if(!nameTag.dataset.orig) nameTag.dataset.orig = nameTag.textContent;
+  nameTag.textContent = sharing ? nameTag.dataset.orig + ' 🖥️' : nameTag.dataset.orig;
+  btn.classList.toggle('active', sharing);
+  toast(`${nameTag.dataset.orig} ${sharing ? 'started sharing their screen' : 'stopped sharing'}`);
+}
+function inviteGuest(){
+  addTile('New Guest', false);
+  toast('Guest added to stage (demo)');
+}
+async function openInviteGuest(){
+  if(!currentRoomId || !authToken){ toast('Invite links are available once you\'re live'); return; }
+  document.getElementById('inviteOverlay').classList.add('show');
+  document.getElementById('inviteLinkBody').innerHTML = '<div class="wp-note">Generating a secure link…</div>';
+  try{
+    const res = await apiFetch(`/api/rooms/${currentRoomId}/invite`, { method:'POST' });
+    const link = res.url || `${location.origin}/join/${res.token}`;
+    document.getElementById('inviteLinkBody').innerHTML = `
+      <div class="field-lbl">One-time link · expires in ${res.expiresInMinutes||120} minutes</div>
+      <div class="copy-row">
+        <input type="text" id="inviteLinkInput" readonly value="${link}">
+        <button onclick="copyInviteLink()">Copy</button>
+      </div>
+      <div class="wp-note" style="margin-top:10px;">Works once — after someone joins with it, it stops working.</div>`;
+  }catch(_err){
+    document.getElementById('inviteLinkBody').innerHTML = '<div class="wp-note">Could not generate a link right now.</div>';
+  }
+}
+function copyInviteLink(){
+  const input = document.getElementById('inviteLinkInput');
+  input.select();
+  if(navigator.clipboard) navigator.clipboard.writeText(input.value).catch(()=>{});
+  toast('Invite link copied');
+}
+let tipAmountCents = 500;
+function openTipModal(){
+  if(!authToken){ toast('Log in to send a tip'); document.getElementById('authOverlay').classList.add('show'); return; }
+  document.getElementById('tipHostName').textContent = document.getElementById('lrTitle').textContent.split(' — ')[0] || 'the host';
+  document.getElementById('tipCustomAmount').value = '';
+  document.querySelectorAll('#tipAmountRow .platform-chip').forEach(c=>c.classList.remove('on'));
+  document.querySelector('#tipAmountRow .platform-chip').classList.add('on');
+  tipAmountCents = 500;
+  document.getElementById('tipOverlay').classList.add('show');
+}
+function closeTipModal(){ document.getElementById('tipOverlay').classList.remove('show'); }
+document.getElementById('tipOverlay').addEventListener('click', e=>{ if(e.target.id==='tipOverlay') closeTipModal(); });
+function pickTipAmount(chip){
+  document.querySelectorAll('#tipAmountRow .platform-chip').forEach(c=>c.classList.remove('on'));
+  chip.classList.add('on');
+  tipAmountCents = parseInt(chip.dataset.amt);
+  document.getElementById('tipCustomAmount').value = '';
+}
+async function sendTip(){
+  const custom = document.getElementById('tipCustomAmount').value.trim();
+  const amountCents = custom ? Math.round(parseFloat(custom)*100) : tipAmountCents;
+  if(!amountCents || amountCents < 100){ toast('Minimum tip is $1'); return; }
+  if(!currentRoomId){ toast('Join a live room first'); return; }
+  const message = document.getElementById('tipMessage').value.trim();
+  try{
+    const res = await apiFetch('/api/payments/tip', { method:'POST', body: JSON.stringify({ roomId: currentRoomId, amountCents, message }) });
+    closeTipModal();
+    toast('Redirecting to secure checkout…');
+    if(res.url) window.location.href = res.url;
+  }catch(_err){ /* apiFetch already toasted — e.g. host hasn't set up payouts yet */ }
+}
+
+function closeInviteGuest(){ document.getElementById('inviteOverlay').classList.remove('show'); }
+document.getElementById('inviteOverlay').addEventListener('click', e=>{ if(e.target.id==='inviteOverlay') closeInviteGuest(); });
+function toggleCtl(id, label){
+  const btn = document.getElementById(id);
+  btn.classList.toggle('off');
+  const isOff = btn.classList.contains('off');
+  if(myStream){
+    if(id==='micBtn'){
+      myStream.getAudioTracks().forEach(t=> t.enabled = !isOff);
+      const stat = document.getElementById('myMicStat');
+      if(stat){ stat.textContent = isOff ? '🔇' : '🎤'; stat.classList.toggle('off', isOff); }
+    }
+    if(id==='camBtn'){
+      myStream.getVideoTracks().forEach(t=> t.enabled = !isOff);
+      const video = document.getElementById('myVideo');
+      const fb = document.getElementById('myFallback');
+      if(video && fb && myStream.getVideoTracks().length){
+        video.style.display = isOff ? 'none' : 'block';
+        fb.style.display = isOff ? 'flex' : 'none';
+        if(isOff) fb.innerHTML = '📷';
+      }
+    }
+  }
+  toast(`${label} ${isOff ? 'off' : 'on'}`);
+}
+function lrReact(emoji){
+  lrReactVisual(emoji);
+  if(socket && currentRoomId) socket.emit('room:reaction', { roomId: currentRoomId, emoji });
+}
+function lrReactVisual(emoji){
+  const stage = document.getElementById('lrStage');
+  const el = document.createElement('span');
+  el.className = 'float-react';
+  el.textContent = emoji;
+  el.style.left = (20 + Math.random()*60) + '%';
+  el.style.bottom = '10px';
+  stage.appendChild(el);
+  setTimeout(()=> el.remove(), 1600);
+}
+async function leaveRoom(){
+  clearInterval(lrViewerTimer);
+  if(myStream){ myStream.getTracks().forEach(t=>t.stop()); myStream=null; }
+  if(myCamStream){ myCamStream.getTracks().forEach(t=>t.stop()); myCamStream=null; }
+  sharingScreen = false;
+  resetWatchParty();
+  if(socket && currentRoomId) socket.emit('room:leave', { roomId: currentRoomId });
+  if(currentRoomId && authToken){
+    try{
+      if(lrIsHost) await apiFetch(`/api/rooms/${currentRoomId}`, { method:'PATCH', body: JSON.stringify({ status:'ended' }) });
+      else await apiFetch(`/api/rooms/${currentRoomId}/leave`, { method:'POST' });
+    }catch(_err){ /* non-fatal — still leave the UI room below */ }
+  }
+  document.getElementById('liveRoom').classList.remove('show');
+  toast(lrIsHost ? 'Stream ended' : 'You left the panel');
+  loadPanels();
+  currentRoomId = null;
+}
+function seedLrChat(title){
+  const body = document.getElementById('lrChatBody');
+  body.innerHTML = `<div class="msg bot"><div class="who"><span class="flag">🤖</span>SwanyBot</div><div class="bubble">You're in "${title}". Be respectful and have fun trading!</div></div>`;
+}
+function appendLrChatMessage(who, text, isMe, moderated){
+  const body = document.getElementById('lrChatBody');
+  const el = document.createElement('div');
+  el.className='msg';
+  const bubbleStyle = moderated ? 'color:var(--text-dim); font-style:italic; border-style:dashed;' : '';
+  el.innerHTML = `<div class="who"><span class="flag">${isMe?'🌐':'👤'}</span>${who}</div><div class="bubble" style="${bubbleStyle}">${text}</div>`;
+  body.appendChild(el);
+  body.scrollTop = body.scrollHeight;
+}
+function sendLrChat(){
+  const input = document.getElementById('lrChatInput');
+  const val = input.value.trim();
+  if(!val) return;
+  appendLrChatMessage(currentUser?.handle || 'You', val, true);
+  input.value='';
+  if(socket && currentRoomId){
+    socket.emit('room:chat', { roomId: currentRoomId, text: val, lang: 'en' });
+  } else {
+    toast('Log in to broadcast chat live to the room');
+  }
+}
+
+/* ---- SOCIAL SHARE ---- */
+function openShare(title){
+  document.getElementById('shareSubtitle').textContent = `"${title}"`;
+  document.getElementById('shareLink').value = `kimsmarbles.app/share/${title.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,24)}`;
+  document.getElementById('shareOverlay').classList.add('show');
+}
+function closeShare(){ document.getElementById('shareOverlay').classList.remove('show'); }
+document.getElementById('shareOverlay').addEventListener('click', e=>{ if(e.target.id==='shareOverlay') closeShare(); });
+function shareVia(platform){
+  toast(`Shared to ${platform}`);
+  closeShare();
+}
+function copyShareLink(){
+  const input = document.getElementById('shareLink');
+  input.select();
+  toast('Link copied to clipboard');
+}
+
+/* ---- MULTI-LANGUAGE CHAT ---- */
+// canned messages stored per-language; "shown" language re-renders using the matching translation
+const chatLog = [
+  { name:"SwanyBot", flag:"🤖", lang:"en", bot:true, t:{en:"Welcome to Kim's Marbles! Try filtering the marketplace or tap Join Panel on a live room to get started.", es:"¡Bienvenido a Kim's Marbles! Prueba filtrar el mercado o unirte a un panel en vivo.", fr:"Bienvenue sur Kim's Marbles ! Essayez de filtrer la marketplace ou de rejoindre un panel en direct.", ja:"Kim's Marblesへようこそ!マーケットプレイスを絞り込むか、ライブパネルに参加してみてください。", pt:"Bem-vindo ao Kim's Marbles! Experimente filtrar o mercado ou entrar em um painel ao vivo.", de:"Willkommen bei Kim's Marbles! Filtere den Marktplatz oder tritt einem Live-Panel bei."} },
+  { name:"Joyce 🦋", flag:"🇺🇸", lang:"en", t:{en:"Welcome to the trade room everyone!", es:"¡Bienvenidos a la sala de intercambio!", fr:"Bienvenue dans la salle d'échange !", ja:"トレードルームへようこそ!", pt:"Bem-vindos à sala de trocas!", de:"Willkommen im Tauschraum!"} },
+  { name:"Marco_IT", flag:"🇮🇹", lang:"it", t:{en:"Does anyone have a Lutz to trade?", es:"¿Alguien tiene un Lutz para intercambiar?", fr:"Quelqu'un a un Lutz à échanger ?", ja:"ルッツを交換できる人いますか?", pt:"Alguém tem um Lutz para trocar?", de:"Hat jemand einen Lutz zum Tauschen?"} },
+  { name:"Yuki_JP", flag:"🇯🇵", lang:"ja", t:{en:"This oxblood swirl is beautiful 😍", es:"Este remolino oxblood es hermoso 😍", fr:"Ce tourbillon oxblood est magnifique 😍", ja:"このオックスブラッド・スワールは美しい😍", pt:"Esse redemoinho oxblood é lindo 😍", de:"Dieser Oxblood-Wirbel ist wunderschön 😍"} },
+  { name:"CaliBones", flag:"🇲🇽", lang:"es", t:{en:"I'll trade my sulphide for it", es:"Cambio mi sulfuro por él", fr:"J'échange mon sulfure contre lui", ja:"サルファイドと交換します", pt:"Troco meu sulfeto por ele", de:"Ich tausche mein Sulfid dafür"} },
+];
+const chatBody = document.getElementById('chatBody');
+function renderChat(){
+  const shown = document.getElementById('langSelect').value;
+  chatBody.innerHTML = chatLog.map(m=>{
+    const translated = m.t[shown] || m.t.en;
+    const isOriginal = m.lang === shown;
+    return `<div class="msg${m.bot ? ' bot' : ''}">
+      <div class="who"><span class="flag">${m.flag}</span>${m.name}</div>
+      <div class="bubble">${translated}</div>
+      ${isOriginal ? '' : `<div class="orig">translated from ${langName(m.lang)}</div>`}
+    </div>`;
+  }).join('');
+  chatBody.scrollTop = chatBody.scrollHeight;
+}
+function langName(code){
+  return {en:"English",es:"Spanish",fr:"French",ja:"Japanese",pt:"Portuguese",de:"German",it:"Italian"}[code] || code;
+}
+function toggleChat(){
+  const drawer = document.getElementById('chatDrawer');
+  drawer.classList.toggle('show');
+  if(drawer.classList.contains('show')){
+    document.getElementById('chatUnread').style.display='none';
+    renderChat();
+  }
+}
+function sendChat(){
+  const input = document.getElementById('chatInput');
+  const val = input.value.trim();
+  if(!val) return;
+  const shown = document.getElementById('langSelect').value;
+  chatLog.push({ name:"You", flag:"🌐", lang:shown, t:{ [shown]: val, en: val } });
+  input.value='';
+  renderChat();
+  toast('Message sent — auto-translated for everyone');
+}
+
+function renderMyListings(){
+  const wrap = document.getElementById('myListingsList');
+  if(!wrap) return;
+  const mine = currentUser ? listings.filter(l=>l.seller_handle===currentUser.handle) : [];
+  if(!mine.length){ wrap.innerHTML = '<div class="wp-note" style="text-align:left;">You haven\'t listed anything yet — use "＋ List a Marble" on the Marketplace.</div>'; return; }
+  wrap.innerHTML = mine.map(l=>`
+    <div class="mylisting-row">
+      <span class="mi">🔮</span>
+      <span class="mn">${l.name}${l.status==='sold'?' <span style="color:var(--text-dim); font-size:11px;">(SOLD)</span>':''}</span>
+      <span class="mp">${l.type==='trade' ? 'Trade' : l.type==='auction' ? '$'+((l.current_bid_cents||0)/100).toFixed(2)+' bid' : '$'+((l.price_cents||0)/100).toFixed(2)}</span>
+      ${l.status!=='sold' ? `<button onclick="markSold('${l.id}')">Mark Sold</button>` : ''}
+      <button onclick="removeListing('${l.id}')">Remove</button>
+    </div>`).join('');
+}
+async function markSold(id){
+  try{
+    await apiFetch(`/api/listings/${id}`, { method:'PATCH', body: JSON.stringify({ status:'sold' }) });
+    toast('Listing marked as sold');
+    await loadListings();
+    renderMyListings();
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+async function removeListing(id){
+  try{
+    await apiFetch(`/api/listings/${id}`, { method:'DELETE' });
+    toast('Listing removed from the marketplace');
+    await loadListings();
+    renderMyListings();
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+renderMyListings();
+
+/* ---- REPORT ---- */
+let reportTarget = null;
+function openReport(type, label, id){
+  reportTarget = {type, label, id: id || null};
+  document.getElementById('reportSubtitle').textContent = `Reporting: ${label}`;
+  document.querySelector('input[name="reportReason"]').checked = true;
+  document.getElementById('reportDetails').value='';
+  document.getElementById('reportOverlay').classList.add('show');
+}
+function closeReport(){ document.getElementById('reportOverlay').classList.remove('show'); }
+document.getElementById('reportOverlay').addEventListener('click', e=>{ if(e.target.id==='reportOverlay') closeReport(); });
+async function submitReport(){
+  if(!reportTarget){ closeReport(); return; } // defensive: modal always sets this via openReport(), but never crash if it's missing
+  if(!reportTarget){ closeReport(); return; }
+  const reason = document.querySelector('input[name="reportReason"]:checked').value;
+  const details = document.getElementById('reportDetails').value.trim();
+  closeReport();
+  // real submission needs the target's actual database id — wired for listings
+  // (which have one); panels/posts/profiles in this preview don't carry a real
+  // id through to the report button yet, so those still confirm locally.
+  if(reportTarget.id && authToken){
+    try{
+      await apiFetch('/api/reports', { method:'POST', body: JSON.stringify({
+        targetType: reportTarget.type, targetId: reportTarget.id, targetLabel: reportTarget.label, reason, details
+      })});
+      toast('Report submitted — thank you for keeping the community safe');
+      return;
+    }catch(_err){ /* apiFetch already toasted; fall through to local confirmation */ }
+  }
+  toast('Report submitted — thank you for keeping the community safe');
+  addNotif('🛡️', `SwanyBot's moderation team is reviewing your report on "${reportTarget.label}" (${reason})`);
+}
+
+/* ---- DIRECT MESSAGES ---- */
+let conversationsList = [];
+async function loadConversations(){
+  if(!authToken){ conversationsList = []; return; }
+  try{ conversationsList = await apiFetch('/api/conversations'); }catch(_err){ conversationsList = []; }
+  const unreadCount = conversationsList.filter(c=>c.unread).length;
+  const badge = document.getElementById('inboxUnread');
+  badge.textContent = unreadCount;
+  badge.style.display = unreadCount ? 'flex' : 'none';
+}
+function toggleInbox(){
+  const d = document.getElementById('inboxDrawer');
+  d.classList.toggle('show');
+  if(d.classList.contains('show')) showInboxList();
+}
+async function showInboxList(){
+  document.getElementById('inboxThread').style.display='none';
+  document.getElementById('inboxList').style.display='flex';
+  document.getElementById('inboxHeadTitle').innerHTML = 'Messages<small>Direct messages</small>';
+  const list = document.getElementById('inboxList');
+  if(!authToken){
+    list.innerHTML = '<div class="wp-note" style="padding:16px;">Log in to see your messages</div>';
+    return;
+  }
+  await loadConversations();
+  list.innerHTML = conversationsList.map(c=>`
+    <div class="nd-item" onclick="openInboxThread('${c.other_handle.replace(/'/g,"\\'")}')">
+      <span class="ic" style="font-size:22px;">👤</span>
+      <span class="tx"><b>${c.other_handle}</b>${c.unread ? ' 🔵' : ''}<div class="tm">${(c.last_text||'Say hello!').slice(0,40)}</div></span>
+    </div>`).join('') || '<div class="wp-note" style="padding:16px;">No conversations yet</div>';
+}
+async function openInboxThread(handle){
+  if(!authToken){ toast('Log in to send messages'); document.getElementById('authOverlay').classList.add('show'); return; }
+  document.getElementById('inboxDrawer').classList.add('show');
+  document.getElementById('inboxList').style.display='none';
+  document.getElementById('inboxThread').style.display='flex';
+  document.getElementById('inboxHeadTitle').innerHTML = `${handle}<small>Direct message</small>`;
+  try{
+    const user = await apiFetch(`/api/users/${encodeURIComponent(handle)}`);
+    document.getElementById('inboxDrawer').dataset.activeUserId = user.id;
+    const data = await apiFetch(`/api/conversations/with/${user.id}`);
+    renderInboxThread(data.messages);
+  }catch(_err){ /* apiFetch already toasted (e.g. handle not found) */ }
+}
+function renderInboxThread(messages){
+  const body = document.getElementById('inboxThreadBody');
+  body.innerHTML = messages.map(m=>`
+    <div class="msg" style="align-self:${m.sender_id===currentUser?.id?'flex-end':'flex-start'};">
+      <div class="bubble" style="${m.sender_id===currentUser?.id?'background:rgba(212,175,55,.12); border-color:var(--gold);':''}">${m.text}</div>
+    </div>`).join('');
+  body.scrollTop = body.scrollHeight;
+}
+async function sendInboxMsg(){
+  const input = document.getElementById('inboxInput');
+  const val = input.value.trim();
+  if(!val) return;
+  const userId = document.getElementById('inboxDrawer').dataset.activeUserId;
+  try{
+    await apiFetch(`/api/conversations/with/${userId}`, { method:'POST', body: JSON.stringify({ text: val }) });
+    input.value='';
+    const data = await apiFetch(`/api/conversations/with/${userId}`);
+    renderInboxThread(data.messages);
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+document.addEventListener('click', e=>{
+  if(!e.target.closest('#inboxDrawer') && !e.target.closest('.bell-wrap')) document.getElementById('inboxDrawer').classList.remove('show');
+});
+
+/* ---- SELLER PROFILE ---- */
+async function openProfile(handle){
+  document.getElementById('profileOverlay').classList.add('show');
+  document.getElementById('pfName').textContent = handle;
+  document.getElementById('pfMember').textContent = 'Loading…';
+  try{
+    const p = await apiFetch(`/api/users/${encodeURIComponent(handle)}`);
+    document.getElementById('pfMember').textContent = 'Member since ' + new Date(p.created_at).getFullYear();
+    document.getElementById('pfListings').textContent = p.listings;
+    document.getElementById('pfTrades').textContent = p.trades;
+    document.getElementById('pfRating').textContent = '—'; // no rating field on the backend yet
+    document.getElementById('pfAvatar').textContent = p.avatar_icon || '👤';
+    const fb = document.getElementById('followBtn');
+    fb.textContent = '＋ Follow';
+    fb.classList.remove('following');
+    fb.dataset.userId = p.id;
+    fb.dataset.name = handle;
+  }catch(_err){
+    document.getElementById('pfMember').textContent = 'Could not load profile';
+  }
+}
+function closeProfile(){ document.getElementById('profileOverlay').classList.remove('show'); }
+document.getElementById('profileOverlay').addEventListener('click', e=>{ if(e.target.id==='profileOverlay') closeProfile(); });
+async function toggleFollow(){
+  if(!authToken){ toast('Log in to follow collectors'); document.getElementById('authOverlay').classList.add('show'); return; }
+  const fb = document.getElementById('followBtn');
+  const userId = fb.dataset.userId;
+  const name = fb.dataset.name;
+  try{
+    const res = await apiFetch(`/api/users/${userId}/follow`, { method:'POST' });
+    fb.textContent = res.following ? '✓ Following' : '＋ Follow';
+    fb.classList.toggle('following', res.following);
+    toast(res.following ? `Following ${name}` : `Unfollowed ${name}`);
+    if(res.following) unlockAch('followed');
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+
+/* ---- DEAL ROOM ---- */
+let currentDeal = null;
+function openDealRoom(l, icon, bg){
+  currentDeal = l;
+  document.getElementById('dealIcon').textContent = icon;
+  document.getElementById('dealIcon').style.background = bg;
+  document.getElementById('dealName').textContent = l.name;
+  const priceLabel = l.type==='trade' ? 'Trade only' : l.type==='auction' ? `$${((l.current_bid_cents||0)/100).toFixed(2)} current bid` : `$${((l.price_cents||0)/100).toFixed(2)}`;
+  document.getElementById('dealPrice').textContent = `${priceLabel} · ${l.seller_handle}`;
+  const defaultTab = l.type==='trade' ? 'trade' : l.type==='auction' ? 'offer' : 'buy';
+  document.querySelectorAll('.deal-tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.deal-pane').forEach(t=>t.classList.remove('on'));
+  const tabEl = [...document.querySelectorAll('.deal-tab')].find(t=>t.textContent.toLowerCase().includes(defaultTab==='buy'?'buy':defaultTab==='offer'?'offer':'trade'));
+  tabEl.classList.add('on');
+  document.getElementById('pane-'+defaultTab).classList.add('on');
+  updateDealBtn(defaultTab);
+  renderTradePicks();
+  document.getElementById('dealOverlay').classList.add('show');
+}
+function closeDeal(){ document.getElementById('dealOverlay').classList.remove('show'); }
+document.getElementById('dealOverlay').addEventListener('click', e=>{ if(e.target.id==='dealOverlay') closeDeal(); });
+function switchDealTab(tab, el){
+  document.querySelectorAll('.deal-tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.deal-pane').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('pane-'+tab).classList.add('on');
+  updateDealBtn(tab);
+}
+function updateDealBtn(tab){
+  const btn = document.getElementById('dealActionBtn');
+  if(tab==='buy') btn.textContent = `Buy Now — $${((currentDeal.price_cents||0)/100).toFixed(2)}`;
+  else if(tab==='offer') btn.textContent = 'Send Offer';
+  else btn.textContent = 'Send Trade Proposal';
+}
+function renderTradePicks(){
+  const wrap = document.getElementById('tradePickList');
+  if(!myCollection.length){ wrap.innerHTML = '<span style="color:var(--text-dim); font-size:12.5px;">Your collection is empty — add marbles first.</span>'; return; }
+  wrap.innerHTML = myCollection.map((m)=>`<span class="trade-pick-item" data-id="${m.id}" onclick="this.classList.toggle('on')">${m.icon} ${m.name}</span>`).join('');
+}
+async function sendDeal(){
+  if(!authToken){ toast('Log in to make an offer'); document.getElementById('authOverlay').classList.add('show'); return; }
+  const activeTab = document.querySelector('.deal-tab.on').textContent.trim();
+  const kind = activeTab==='Buy Now' ? 'buy' : activeTab==='Make Offer' ? 'offer' : 'trade';
+  const body = { kind };
+  if(kind==='buy') body.offerAmountCents = currentDeal.price_cents;
+  if(kind==='offer') body.offerAmountCents = Math.round(parseFloat((document.getElementById('offerAmount').value||'0').replace(/[^0-9.]/g,''))*100) || currentDeal.price_cents;
+  if(kind==='trade') body.tradeItemIds = [...document.querySelectorAll('.trade-pick-item.on')].map(el=>el.dataset.id);
+  try{
+    await apiFetch(`/api/listings/${currentDeal.id}/offers`, { method:'POST', body: JSON.stringify(body) });
+    toast(`${activeTab} sent to ${currentDeal.seller_handle} for "${currentDeal.name}"`);
+    closeDeal();
+    unlockAch('traded');
+    logActivity('🤝', `${activeTab} sent to ${currentDeal.seller_handle} for "${currentDeal.name}"`);
+    loadNotifications();
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+
+/* ---- NOTIFICATIONS ---- */
+let notifs = [];
+function timeAgo(iso){
+  const s = Math.floor((Date.now() - new Date(iso))/1000);
+  if(s<60) return 'Just now';
+  if(s<3600) return Math.floor(s/60)+'m ago';
+  if(s<86400) return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+function notifIcon(type){
+  return { challenge:'⚔️', challenge_accepted:'✅', offer_received:'🔨', payment_received:'💰', moderation:'🛡️' }[type] || '🔔';
+}
+async function loadNotifications(){
+  if(!authToken){ notifs = []; renderNotifs(); return; }
+  try{
+    notifs = await apiFetch('/api/notifications');
+  }catch(_err){ notifs = []; }
+  renderNotifs();
+  const unread = notifs.filter(n=>!n.read).length;
+  const badge = document.getElementById('bellUnread');
+  badge.textContent = unread;
+  badge.style.display = unread ? 'flex' : 'none';
+}
+function renderNotifs(){
+  if(!notifs.length){
+    document.getElementById('notifDropdown').innerHTML = `<div class="nd-head">Notifications</div><div class="wp-note" style="padding:16px;">${authToken ? "You're all caught up" : 'Log in to see notifications'}</div>`;
+    return;
+  }
+  document.getElementById('notifDropdown').innerHTML = `<div class="nd-head">Notifications</div>` +
+    notifs.map((n)=> n.type==='challenge' ? `
+      <div class="nd-item" style="cursor:default;">
+        <span class="ic">${notifIcon(n.type)}</span>
+        <span class="tx">${n.text}<div class="tm">${timeAgo(n.created_at)}</div>
+          <div style="display:flex; gap:6px; margin-top:6px;">
+            <button class="wp-btn" style="padding:5px 10px; font-size:11.5px;" onclick="acceptChallenge('${n.id}','${n.ref_id}')">Accept</button>
+            <button class="wp-btn" style="padding:5px 10px; font-size:11.5px;" onclick="declineChallenge('${n.id}','${n.ref_id}')">Decline</button>
+          </div>
+        </span>
+      </div>` : `<div class="nd-item" onclick="markNotifRead('${n.id}')"><span class="ic">${notifIcon(n.type)}</span><span class="tx">${n.text}<div class="tm">${timeAgo(n.created_at)}</div></span></div>`
+    ).join('');
+}
+async function markNotifRead(id){
+  try{ await apiFetch(`/api/notifications/${id}/read`, { method:'PATCH' }); loadNotifications(); }catch(_err){}
+}
+async function acceptChallenge(notifId, battleId){
+  try{
+    await apiFetch(`/api/battles/${battleId}/accept`, { method:'POST' });
+    await apiFetch(`/api/notifications/${notifId}/read`, { method:'PATCH' });
+    document.getElementById('notifDropdown').classList.remove('show');
+    toast('Battle accepted — entering the arena!');
+    switchToView('battles');
+    const mine = await apiFetch('/api/battles?mine=1');
+    const battle = mine.find(b=>b.id===battleId) || {};
+    const roundMin = Math.round((battle.round_seconds||300)/60);
+    startArenaBattle(battle.challenger_handle || 'Challenger', currentUser.handle, roundMin, battleId);
+    loadNotifications();
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+async function declineChallenge(notifId, battleId){
+  try{
+    await apiFetch(`/api/battles/${battleId}/decline`, { method:'POST' });
+    await apiFetch(`/api/notifications/${notifId}/read`, { method:'PATCH' });
+    toast('Challenge declined');
+    loadNotifications();
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+function addNotif(ic, tx){
+  // local-only toast-style notification for actions the backend doesn't yet
+  // generate a row for in this preview (e.g. simulated panel/battle events)
+  notifs.unshift({ id:'local-'+Date.now(), text:tx, created_at:new Date().toISOString(), read:false });
+  renderNotifs();
+  const badge = document.getElementById('bellUnread');
+  badge.style.display = 'flex';
+  badge.textContent = parseInt(badge.textContent||0) + 1;
+}
+function toggleNotifs(){
+  document.getElementById('notifDropdown').classList.toggle('show');
+  if(!document.getElementById('notifDropdown').classList.contains('show')) return;
+  loadNotifications();
+}
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.bell-wrap')) document.getElementById('notifDropdown').classList.remove('show');
+});
+renderNotifs();
+
+/* ---- CREATE BATTLE ---- */
+let arenaTimerInterval = null;
+function openCreateBattle(){
+  if(!authToken){ toast('Log in to challenge someone'); document.getElementById('authOverlay').classList.add('show'); return; }
+  document.getElementById('cbOpponent').value = '';
+  document.querySelectorAll('#cbWager div').forEach(d=>d.classList.remove('on'));
+  document.querySelector('#cbWager div[data-w="points"]').classList.add('on');
+  document.getElementById('cbMarblePane').style.display='none';
+  const mp = document.getElementById('cbMarblePick');
+  mp.innerHTML = myCollection.length ? myCollection.map(m=>`<option value="${m.id}">${m.icon} ${m.name}</option>`).join('') : '<option value="">No marbles in your collection yet</option>';
+  document.getElementById('battleOverlay').classList.add('show');
+}
+function closeCreateBattle(){ document.getElementById('battleOverlay').classList.remove('show'); }
+document.getElementById('battleOverlay').addEventListener('click', e=>{ if(e.target.id==='battleOverlay') closeCreateBattle(); });
+document.getElementById('cbWager').addEventListener('click', e=>{
+  const d = e.target.closest('div[data-w]'); if(!d) return;
+  document.querySelectorAll('#cbWager div').forEach(x=>x.classList.remove('on'));
+  d.classList.add('on');
+  document.getElementById('cbMarblePane').style.display = d.dataset.w==='marble' ? 'block' : 'none';
+});
+async function sendBattleChallenge(){
+  const handle = document.getElementById('cbOpponent').value.trim();
+  if(!handle){ toast("Enter the opponent's handle"); return; }
+  const wagerType = document.querySelector('#cbWager div.on').dataset.w;
+  const wagerItemId = wagerType==='marble' ? document.getElementById('cbMarblePick').value : undefined;
+  const roundSeconds = (parseInt(document.getElementById('cbLength').value) || 5) * 60;
+  try{
+    const opponent = await apiFetch(`/api/users/${encodeURIComponent(handle)}`);
+    const battle = await apiFetch('/api/battles', { method:'POST', body: JSON.stringify({
+      opponentId: opponent.id, wagerType, wagerItemId, roundSeconds
+    })});
+    closeCreateBattle();
+    toast(`Challenge sent to ${handle} — waiting for them to accept`);
+    unlockAch('challenged');
+    logActivity('⚔️', `Challenged ${handle} to a PK-Battle`);
+    loadNotifications();
+    // In a real multi-user session the opponent accepts from their own device
+    // (their notification bell → Accept, see acceptChallenge()); this preview
+    // has only one live viewer, so there's nothing to auto-accept it here.
+  }catch(_err){ /* apiFetch already toasted (e.g. handle not found) */ }
+}
+function startArenaBattle(nameA, nameB, minutes, battleId){
+  currentBattleId = battleId || null;
+  document.getElementById('fighterAName').textContent = nameA;
+  document.getElementById('fighterBName').textContent = nameB;
+  document.getElementById('scoreA').textContent = '0';
+  document.getElementById('scoreB').textContent = '0';
+  document.getElementById('meterA').style.width = '50%';
+  document.getElementById('meterB').style.width = '50%';
+  scoreA = 0; scoreB = 0;
+  let secs = (minutes || 5) * 60;
+  clearInterval(arenaTimerInterval);
+  const timerEl = document.getElementById('arenaTimer');
+  function tick(){
+    const m = Math.floor(secs/60), s = secs%60;
+    timerEl.textContent = `⏱ Round ends in ${m}:${s.toString().padStart(2,'0')}`;
+    if(secs<=0){
+      clearInterval(arenaTimerInterval);
+      timerEl.textContent = '🏁 Battle ended';
+      toast(`Battle over — ${scoreA>=scoreB?nameA:nameB} wins!`);
+      if(currentBattleId && authToken){
+        apiFetch(`/api/battles/${currentBattleId}/end`, { method:'POST' }).catch(()=>{});
+      }
+      return;
+    }
+    secs--;
+  }
+  tick();
+  arenaTimerInterval = setInterval(tick, 1000);
+}
+
+/* ---- CREATE LISTING ---- */
+document.getElementById('iconPick').innerHTML = marbleIcons.map((ic,i)=>`<span class="${i===0?'on':''}" onclick="pickIcon(this)">${ic}</span>`).join('');
+function pickIcon(el){ document.querySelectorAll('#iconPick span').forEach(s=>s.classList.remove('on')); el.classList.add('on'); }
+document.getElementById('clType').addEventListener('click', e=>{
+  const d = e.target.closest('div[data-t]'); if(!d) return;
+  document.querySelectorAll('#clType div').forEach(x=>x.classList.remove('on'));
+  d.classList.add('on');
+  document.getElementById('clPriceLbl').textContent = d.dataset.t==='auction' ? 'Starting Bid ($)' : d.dataset.t==='trade' ? 'Trade For (optional note)' : 'Price ($)';
+});
+function openCreateListing(){ document.getElementById('createOverlay').classList.add('show'); }
+function closeCreateListing(){ document.getElementById('createOverlay').classList.remove('show'); }
+document.getElementById('createOverlay').addEventListener('click', e=>{ if(e.target.id==='createOverlay') closeCreateListing(); });
+async function publishListing(){
+  if(!authToken){ toast('Log in to list a marble'); document.getElementById('authOverlay').classList.add('show'); return; }
+  const name = document.getElementById('clName').value.trim();
+  if(!name){ toast('Give your marble a name first'); return; }
+  const category = document.getElementById('clCat').value;
+  const grade = document.getElementById('clGrade').value;
+  const type = document.querySelector('#clType div.on').dataset.t;
+  const priceCents = Math.round((parseFloat(document.getElementById('clPrice').value) || 0) * 100);
+  const description = document.getElementById('clDesc').value.trim() || `Listed by you · ${category}`;
+  try{
+    await apiFetch('/api/listings', { method:'POST', body: JSON.stringify({
+      name, description, category, grade, type, priceCents, auctionEndsInMinutes: type==='auction' ? 60 : undefined
+    })});
+    closeCreateListing();
+    document.querySelectorAll('#marketFilters .chip').forEach(c=>c.classList.remove('on'));
+    document.querySelector('#marketFilters .chip[data-cat="all"]').classList.add('on');
+    await loadListings('all');
+    toast(`"${name}" is live on the marketplace!`);
+    logActivity('🆕', `Listed "${name}" on the marketplace`);
+    unlockAch('listed');
+    renderMyListings();
+    document.getElementById('clName').value='';
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+
+/* ---- BATTLE CHALLENGE ---- */
+function challengeToBattle(){
+  const name = document.getElementById('pfName').textContent;
+  closeProfile();
+  openCreateBattle();
+  document.getElementById('cbOpponent').value = name;
+}
+
+/* ---- YOUTUBE WATCH PARTY ---- */
+let wpQueue = [
+  {title:"Vintage Marble Identification Guide", id:"dQw4w9WgXcQ"},
+  {title:"1920s Akro Agate Factory Footage", id:"jNQXAC9IVRw"},
+];
+let wpCurrent = null; // {title, id}
+let wpPlaying = false;
+
+function extractYoutubeId(input){
+  input = input.trim();
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([\w-]{11})/,
+  ];
+  for(const p of patterns){ const m = input.match(p); if(m) return m[1]; }
+  if(/^[\w-]{11}$/.test(input)) return input;
+  return null;
+}
+
+function toggleWatchParty(){
+  const panel = document.getElementById('wpPanel');
+  const stage = document.getElementById('lrStage');
+  const btn = document.getElementById('wpBtn');
+  const showing = panel.classList.toggle('show');
+  stage.style.display = showing ? 'none' : 'grid';
+  btn.classList.toggle('active', showing);
+  if(showing){
+    document.getElementById('wpHostControls').style.display = lrIsHost ? 'flex' : 'none';
+    document.getElementById('wpLoadRow').style.display = lrIsHost ? 'flex' : 'none';
+    renderWpQueue();
+    toast(lrIsHost ? 'Watch Party opened — load a video for everyone' : 'Joined the Watch Party');
+  }
+}
+
+async function wpLoadForEveryone(){
+  const raw = document.getElementById('wpUrlInput').value;
+  const id = extractYoutubeId(raw);
+  if(!id){ toast('That doesn\'t look like a valid YouTube link or ID'); return; }
+  playVideo({title: 'Now Playing', id});
+  document.getElementById('wpUrlInput').value='';
+  toast('Video loaded for everyone in the room');
+  if(currentRoomId){
+    if(socket) socket.emit('watchparty:load', { roomId: currentRoomId, youtubeId: id, title:'Now Playing' });
+    if(authToken){
+      try{ await apiFetch(`/api/rooms/${currentRoomId}/watchparty/load`, { method:'POST', body: JSON.stringify({ youtubeId: id, title:'Now Playing' }) }); }catch(_err){}
+    }
+  }
+}
+
+// isLocalAction=true when called from our own button click; false when it
+// arrived over the socket from another viewer (avoids re-broadcasting an echo)
+function playVideo(v, isLocalAction=true){
+  wpCurrent = v;
+  wpPlaying = true;
+  const wrap = document.getElementById('wpPlayerWrap');
+  wrap.innerHTML = `<iframe id="wpIframe" src="https://www.youtube.com/embed/${v.id}?autoplay=1&start=0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  document.getElementById('wpNowTitle').innerHTML = `${v.title}<small>Loaded from YouTube</small>`;
+  document.getElementById('wpSyncTag').style.display='flex';
+  document.getElementById('wpSyncCount').textContent = lrViewerCount.toLocaleString();
+  if(!isLocalAction) toast('Host loaded a new video');
+}
+
+function wpControl(action){
+  if(!wpCurrent){ toast('Load a video first'); return; }
+  wpApplyRemoteControl(action);
+  if(socket && currentRoomId) socket.emit('watchparty:control', { roomId: currentRoomId, action });
+}
+// shared by the local button handler and the incoming socket event
+function wpApplyRemoteControl(action){
+  if(!wpCurrent) return;
+  const wrap = document.getElementById('wpPlayerWrap');
+  if(action==='pause'){
+    wrap.innerHTML = `<iframe id="wpIframe" src="https://www.youtube.com/embed/${wpCurrent.id}" allow="encrypted-media" allowfullscreen></iframe>`;
+    wpPlaying = false;
+    toast('Paused for everyone');
+  } else if(action==='play'){
+    wrap.innerHTML = `<iframe id="wpIframe" src="https://www.youtube.com/embed/${wpCurrent.id}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    wpPlaying = true;
+    toast('Resumed for everyone');
+  } else if(action==='restart'){
+    wrap.innerHTML = `<iframe id="wpIframe" src="https://www.youtube.com/embed/${wpCurrent.id}?autoplay=1&start=0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    wpPlaying = true;
+    toast('Restarted for everyone');
+  }
+}
+
+function renderWpQueue(){
+  const list = document.getElementById('wpQueueList');
+  if(!wpQueue.length){ list.innerHTML = '<div class="wp-note">Queue is empty — add a video below.</div>'; return; }
+  list.innerHTML = wpQueue.map((q,i)=>`
+    <div class="wp-queue-item">
+      <span class="qt">🎬 ${q.title}</span>
+      <div class="qa">
+        <button onclick="wpPlayFromQueue(${i})">▶ Play</button>
+        ${lrIsHost ? `<button onclick="wpRemoveFromQueue(${i})">✕</button>` : ''}
+      </div>
+    </div>`).join('');
+}
+async function wpAddToQueue(){
+  const raw = document.getElementById('wpQueueInput').value;
+  const id = extractYoutubeId(raw);
+  if(!id){ toast('That doesn\'t look like a valid YouTube link or ID'); return; }
+  wpQueue.push({title: 'Community pick', id});
+  document.getElementById('wpQueueInput').value='';
+  renderWpQueue();
+  toast('Added to the watch party queue');
+  if(currentRoomId && authToken){
+    try{ await apiFetch(`/api/rooms/${currentRoomId}/watchparty/queue`, { method:'POST', body: JSON.stringify({ youtubeId: id, title:'Community pick' }) }); }catch(_err){}
+  }
+}
+function wpPlayFromQueue(i){
+  const v = wpQueue[i];
+  playVideo(v);
+  if(socket && currentRoomId) socket.emit('watchparty:load', { roomId: currentRoomId, youtubeId: v.id, title: v.title });
+  wpQueue.splice(i,1);
+  renderWpQueue();
+  toast(`Now playing: ${v.title}`);
+}
+function wpRemoveFromQueue(i){
+  wpQueue.splice(i,1);
+  renderWpQueue();
+}
+function resetWatchParty(){
+  wpCurrent = null;
+  wpPlaying = false;
+  document.getElementById('wpPanel').classList.remove('show');
+  document.getElementById('wpBtn')?.classList.remove('active');
+  document.getElementById('wpPlayerWrap').innerHTML = '<div class="wp-empty" id="wpEmpty">📺<span>No video loaded yet</span></div>';
+  document.getElementById('wpNowTitle').innerHTML = 'Nothing playing<small id="wpNowSub">Load a YouTube link to start the party</small>';
+  document.getElementById('wpSyncTag').style.display='none';
+}
+
+/* ---- COMMUNITY FEED ---- */
+let feedPosts = [];
+const weeklyChallengeTag = '#SwirlChallenge';
+let feedFilter = 'all';
+async function loadFeed(){
+  try{
+    feedPosts = await apiFetch('/api/feed');
+  }catch(_err){ feedPosts = []; }
+  renderFeed();
+  renderDashboardStats();
+}
+function renderFeed(){
+  const list = feedFilter==='challenge' ? feedPosts.filter(p=>p.text.includes(weeklyChallengeTag)) : feedPosts;
+  document.getElementById('feedList').innerHTML = (list.length ? list.map((p)=>`
+    <div class="post-card">
+      <div class="post-head">
+        <div class="post-avatar" onclick="openProfile('${p.author_handle.replace(/'/g,"\\'")}')">${p.author_icon || '👤'}</div>
+        <div>
+          <div class="pn" onclick="openProfile('${p.author_handle.replace(/'/g,"\\'")}')">${p.author_handle}</div>
+          <div class="pt">${timeAgo(p.created_at)}</div>
+        </div>
+      </div>
+      <div class="post-text">${p.text}</div>
+      ${p.attach_name ? `<div class="post-attach"><span class="ic">${p.attach_icon}</span><span class="nm">${p.attach_name}</span></div>` : ''}
+      <div class="post-actions">
+        <button class="${p.liked_by_me?'liked':''}" onclick="toggleLike('${p.id}')">${p.liked_by_me?'❤️':'🤍'} ${p.like_count}</button>
+        <button onclick="toast('Comments would open here')">💬 ${p.comment_count}</button>
+        <button onclick="openShare('${p.author_handle.replace(/'/g,"\\'")}\\'s post')">⤴ Share</button>
+        <button onclick="openReport('post','${p.author_handle.replace(/'/g,"\\'")}\\'s post')">⚠️ Report</button>
+      </div>
+    </div>`).join('') : '<div class="wp-note">No challenge entries yet — be the first!</div>');
+}
+function filterFeed(f, chipEl){
+  feedFilter = f;
+  document.querySelectorAll('#view-feed .filters .chip').forEach(c=>c.classList.remove('on'));
+  chipEl.classList.add('on');
+  renderFeed();
+}
+function startChallengeEntry(){
+  if(!authToken){ toast('Log in to enter the challenge'); document.getElementById('authOverlay').classList.add('show'); return; }
+  const box = document.getElementById('postText');
+  box.value = `${weeklyChallengeTag} `;
+  box.focus();
+  toast(`Attach your best swirl and post — tagged entries show up under 🏆 Challenge Entries`);
+}
+async function toggleLike(id){
+  if(!authToken){ toast('Log in to like posts'); document.getElementById('authOverlay').classList.add('show'); return; }
+  try{
+    await apiFetch(`/api/feed/${id}/like`, { method:'POST' });
+    loadFeed();
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+function refreshPostAttachOptions(){
+  const sel = document.getElementById('postAttach');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">📎 Attach a marble (optional)</option>' +
+    myCollection.map((m)=>`<option value="${m.id}">${m.icon} ${m.name}</option>`).join('');
+}
+async function publishPost(){
+  if(!authToken){ toast('Log in to post to the feed'); document.getElementById('authOverlay').classList.add('show'); return; }
+  const text = document.getElementById('postText').value.trim();
+  if(!text){ toast('Write something first'); return; }
+  const attachId = document.getElementById('postAttach').value || null;
+  try{
+    await apiFetch('/api/feed', { method:'POST', body: JSON.stringify({ text, attachCollectionItemId: attachId }) });
+    document.getElementById('postText').value='';
+    document.getElementById('postAttach').value='';
+    toast('Posted to the community feed');
+    logActivity('📣', `Posted to the community feed`);
+    unlockAch('posted');
+    loadFeed();
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+
+/* ---- THEME ---- */
+function applyTheme(mode){
+  document.documentElement.setAttribute('data-theme', mode);
+  const lightBtn = document.getElementById('themeLight'), darkBtn = document.getElementById('themeDark');
+  if(lightBtn) lightBtn.classList.toggle('on', mode==='light');
+  if(darkBtn) darkBtn.classList.toggle('on', mode==='dark');
+}
+function setTheme(mode){
+  localStorage.setItem('kmThemeOverride', mode); // manual choice always wins over system preference from here on
+  applyTheme(mode);
+  toast(mode==='dark' ? 'Dark mode on' : 'Light mode on');
+}
+function initTheme(){
+  const saved = localStorage.getItem('kmThemeOverride');
+  if(saved){ applyTheme(saved); return; }
+  const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(systemDark ? 'dark' : 'light');
+  // keep following the system live, but only until the person picks a theme themselves
+  if(window.matchMedia){
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)=>{
+      if(!localStorage.getItem('kmThemeOverride')) applyTheme(e.matches ? 'dark' : 'light');
+    });
+  }
+}
+initTheme();
+
+/* ---- ME / PROFILE ---- */
+/* ---- PAYOUTS ---- */
+async function loadPayoutStatus(){
+  const el = document.getElementById('payoutStatus');
+  if(!authToken){ el.textContent = 'Log in to set up payouts'; return; }
+  try{
+    const res = await apiFetch('/api/payments/status');
+    el.textContent = !res.onboarded ? "Not set up yet — viewers can't tip you until you do."
+      : res.chargesEnabled ? '✅ Payouts active — you can receive tips and sales.'
+      : 'Onboarding started — finish it on Stripe to start receiving money.';
+  }catch(_err){ el.textContent = 'Could not check payout status.'; }
+}
+async function startPayoutOnboarding(){
+  if(!authToken){ toast('Log in first'); document.getElementById('authOverlay').classList.add('show'); return; }
+  try{
+    const res = await apiFetch('/api/payments/onboard', { method:'POST' });
+    toast('Opening Stripe setup…');
+    if(res.url) window.location.href = res.url;
+  }catch(_err){ /* apiFetch already toasted */ }
+}
+
+/* ---- LIVE CHAT MODERATION ---- */
+/* ---- DASHBOARD: ACTIVITY LOG ---- */
+function logActivity(icon, text){
+  const key = 'kmActivityLog';
+  const log = JSON.parse(localStorage.getItem(key) || '[]');
+  log.unshift({ icon, text, at: new Date().toISOString() });
+  localStorage.setItem(key, JSON.stringify(log.slice(0, 30))); // keep the most recent 30
+  renderActivityLog();
+}
+function renderActivityLog(){
+  const wrap = document.getElementById('activityLogList');
+  if(!wrap) return;
+  const log = JSON.parse(localStorage.getItem('kmActivityLog') || '[]');
+  wrap.innerHTML = log.length ? log.map(e=>`
+    <div class="nd-item" style="cursor:default;">
+      <span class="ic">${e.icon}</span>
+      <span class="tx">${e.text}<div class="tm">${timeAgo(e.at)}</div></span>
+    </div>`).join('') : '<div class="wp-note">No activity yet — list something, post, or join a battle to see it here.</div>';
+}
+function renderDashboardStats(){
+  const entries = feedPosts.filter(p=>p.text.includes(weeklyChallengeTag) && p.author_handle===currentUser?.handle).length;
+  document.getElementById('dashChallengeCount').textContent = entries;
+  document.getElementById('dashQuizBest').textContent = `${parseInt(localStorage.getItem('kmQuizBest')||'0')}/7`;
+  document.getElementById('dashSpeedBest').textContent = parseInt(localStorage.getItem('kmSpeedBest')||'0');
+  renderActivityLog();
+}
+
+function loadModSettings(){
+  document.getElementById('modEnabled').checked = localStorage.getItem('kmModEnabled') === '1';
+  document.getElementById('modWordList').value = localStorage.getItem('kmModWords') || '';
+}
+function saveModSettings(){
+  localStorage.setItem('kmModEnabled', document.getElementById('modEnabled').checked ? '1' : '0');
+  localStorage.setItem('kmModWords', document.getElementById('modWordList').value);
+  toast('Moderation settings saved');
+}
+function getModBlockedWords(){
+  return (localStorage.getItem('kmModWords') || '').split('\n').map(w=>w.trim().toLowerCase()).filter(Boolean);
+}
+function isModEnabled(){ return localStorage.getItem('kmModEnabled') === '1'; }
+// returns true if the text should be hidden — only applied in rooms I'm hosting
+function messageIsBlocked(text){
+  if(!lrIsHost || !isModEnabled()) return false;
+  const words = getModBlockedWords();
+  if(!words.length) return false;
+  const lower = text.toLowerCase();
+  return words.some(w=> lower.includes(w));
+}
+
+function saveMe(){
+  toast('Profile saved');
+}
+
+
+/* ---- SWANYBOT WELCOME (spoken via the Web Speech API) ---- */
+const botScript = [
+  { id:'bl-intro',   text:"Welcome to Kim's Marbles! I'm SwanyBot, your guide. Here's a quick rundown so you can jump right in." },
+  { id:'bl-market',  text:"Marketplace: buy, sell, or trade marbles with the community. Tap any card to open a deal room." },
+  { id:'bl-panels',  text:"Panels: join live multi-guest talk rooms for appraisals and trade talk." },
+  { id:'bl-battles', text:"P K Battles: watch collectors go head to head, and send gifts to help your favorite win." },
+  { id:'bl-chat',    text:"Community Chat: type in any language. Everyone reads it in their own, auto-translated." },
+  { id:'bl-share',   text:"Share: send any listing, panel, or battle to friends in one tap." },
+  { id:'bl-tip',     text:"Tip: go live anytime with the Go Live button up top. I'll help you set up your camera and invite guests." },
+];
+let botVoices = [];
+function loadBotVoices(){ botVoices = ('speechSynthesis' in window) ? window.speechSynthesis.getVoices() : []; }
+if('speechSynthesis' in window){
+  loadBotVoices();
+  window.speechSynthesis.onvoiceschanged = loadBotVoices;
+}
+function pickBotVoice(){
+  return botVoices.find(v=>/en/i.test(v.lang) && /female|samantha|google us|zira|aria/i.test(v.name))
+      || botVoices.find(v=>v.lang && v.lang.toLowerCase().startsWith('en'))
+      || botVoices[0] || null;
+}
+let botSpeaking = false;
+function updateBotSpeakBtn(){
+  const btn = document.getElementById('botSpeakBtn');
+  if(!btn) return;
+  btn.innerHTML = botSpeaking ? '🔇 Stop' : '🔊 Hear it out loud';
+  btn.classList.toggle('speaking', botSpeaking);
+}
+function speakWelcome(){
+  if(!('speechSynthesis' in window)){ toast("Your browser doesn't support voice playback"); return; }
+  window.speechSynthesis.cancel();
+  botSpeaking = true;
+  updateBotSpeakBtn();
+  let i = 0;
+  function clearHighlights(){ document.querySelectorAll('.bot-body [data-speak]').forEach(el=>el.classList.remove('speaking')); }
+  function speakNext(){
+    clearHighlights();
+    if(i >= botScript.length || !botSpeaking){ botSpeaking=false; updateBotSpeakBtn(); return; }
+    const step = botScript[i];
+    const el = document.getElementById(step.id);
+    if(el){ el.classList.add('speaking'); if(el.scrollIntoView) el.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+    const utter = new SpeechSynthesisUtterance(step.text);
+    const voice = pickBotVoice();
+    if(voice) utter.voice = voice;
+    utter.rate = 1.0; utter.pitch = 1.05;
+    utter.onend = ()=>{ i++; speakNext(); };
+    utter.onerror = ()=>{ i++; speakNext(); };
+    window.speechSynthesis.speak(utter);
+  }
+  speakNext();
+}
+function stopSpeaking(){
+  botSpeaking = false;
+  if('speechSynthesis' in window) window.speechSynthesis.cancel();
+  document.querySelectorAll('.bot-body [data-speak]').forEach(el=>el.classList.remove('speaking'));
+  updateBotSpeakBtn();
+}
+function toggleBotSpeech(){ botSpeaking ? stopSpeaking() : speakWelcome(); }
+function setBotAutoplayPref(muted){
+  if(muted) localStorage.setItem('kmVoiceAutoplayOff', '1');
+  else localStorage.removeItem('kmVoiceAutoplayOff');
+}
+function openBot(){
+  document.getElementById('botOverlay').classList.add('show');
+  const muteBox = document.getElementById('botMuteToggle');
+  if(muteBox) muteBox.checked = !!localStorage.getItem('kmVoiceAutoplayOff');
+  if(localStorage.getItem('kmVoiceAutoplayOff')) return; // respect the preference — 🔊 button still works
+  // Autoplay attempt — most browsers allow this once the person has already
+  // tapped anything on the page (e.g. the auth gate's Log In / Just Browsing
+  // button), but will silently block it on a true first-ever page load with
+  // zero interaction. The 🔊 button above always works since it's a direct click.
+  setTimeout(speakWelcome, 300);
+}
+function closeBot(){
+  stopSpeaking();
+  document.getElementById('botOverlay').classList.remove('show');
+  document.getElementById('botFab').style.display = 'flex';
+}
+document.getElementById('botOverlay').addEventListener('click', e=>{ if(e.target.id==='botOverlay') closeBot(); });
+// SwanyBot welcome now fires from onAuthed()/skipAuth() after the auth gate clears,
+// not on a bare timer — avoids stacking two modals on load.
+
+function switchToView(viewName){
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active', b.dataset.view===viewName));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='view-'+viewName));
+}
+
+document.getElementById('nav').addEventListener('click', e=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+btn.dataset.view).classList.add('active');
+});
+</script>
+</body>
+</html>
