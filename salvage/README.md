@@ -2,7 +2,7 @@
 
 These are the files that were uploaded individually from the chat where Kim's Marbles was
 built, saved here so they can't be lost when that sandbox resets. Each one sits at the path
-the project's own READMEs give it. 21 unique files; duplicate uploads were dropped by
+the project's own READMEs give it. 22 unique files; duplicate uploads were dropped by
 content hash, and the three older backend READMEs are in `history/`.
 
 **This is not a runnable project.** It can't be installed, tested or deployed: the core is
@@ -21,6 +21,7 @@ the newest versions that were uploaded) and delete this folder.
 | `kims-marbles-backend/server/tests/ratelimit.test.js` | 8 token-bucket tests |
 | `kims-marbles-backend/deploy/turnserver.conf` | coturn production template |
 | `kims-marbles-backend/README.md`, `DEPLOY.md` | newest versions (148/148 backend tests claimed) |
+| `kims-marbles-frontend/src/App.jsx` | routes + auth gate (pasted in chat) |
 | `kims-marbles-frontend/src/lib/userSocket.js` | one authenticated socket per device: settings sync, device list |
 | `kims-marbles-frontend/src/lib/ice.js` | fetches and caches TURN credentials |
 | `kims-marbles-frontend/e2e-browser/*.test.mjs` | real-browser tests: dashboard, devices, TURN, chat + theme |
@@ -40,7 +41,7 @@ the other test files, `deploy/nginx.conf`, `deploy/turnserver.test.conf`, `.env.
 `.github/workflows/ci.yml`, `client-reference/mediaClient.js`.
 
 Frontend: `package.json`, `vite.config.*`, `index.html` (with the no-flash theme script),
-`src/main.jsx`, `src/App.jsx`, `src/index.css`, `src/LiveRoom.jsx`, `src/lib/mediaClient.js`,
+`src/main.jsx`, `src/App.css`, `src/index.css`, `src/LiveRoom.jsx`, `src/lib/mediaClient.js`,
 `src/lib/api.js`, `src/lib/theme.js`, `src/lib/learnData.js`, `src/context/AuthContext.jsx`,
 `src/components/*` (LiveChat, TipModal, InviteGuest, ModerationSettings, Layout, ...),
 `src/pages/*`, all unit tests, `src/e2e*.test.jsx`, `e2e-browser/helpers.mjs` and the other
