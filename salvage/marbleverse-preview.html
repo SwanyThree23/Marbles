@@ -406,10 +406,6 @@
   .lr-btn.off{background:#e0273c; border-color:#e0273c; color:#fff;}
   .lr-btn.leave{background:#e0273c; border-color:#e0273c; color:#fff; width:auto; padding:0 20px; border-radius:23px; font-family:'Barlow Condensed'; font-weight:700; font-size:14px; gap:6px;}
   .lr-btn.host-only{border-color:var(--gold); color:var(--gold);}
-  .cam-select{
-    background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:20px; padding:0 12px;
-    height:46px; font-size:13px; font-family:'Barlow Condensed';
-  }
   .float-react{
     position:absolute; font-size:26px; pointer-events:none; animation:floatup 1.6s ease-out forwards;
   }
@@ -2175,20 +2171,174 @@ async function requestMedia(constraints){
     const camOff = document.getElementById('camBtn')?.classList.contains('off');
     if(micOff) myStream.getAudioTracks().forEach(t=>t.enabled=false);
     if(camOff) myStream.getVideoTracks().forEach(t=>t.enabled=false);
+    setupCamSwitch();
   }catch(err){
     myStream = null;
+    teardownCamSwitch();
     video.style.display='none';
     fb.style.display='flex';
     fb.innerHTML = `🚫<div class="perm-msg">${permMessage(err)}</div><button class="perm-btn" onclick="requestMedia()">Allow Camera & Mic</button>`;
   }
 }
-async function switchCamSource(val){
-  if(val==='remote'){
-    toast('Requesting camera control from guest…');
-  } else {
-    toast('Switching camera…');
-    requestMedia({video:{facingMode: val}, audio:true});
+/* ---- camera switching: generated from camera-switch/src/cameraSwitch.js by scripts/inline-into-preview.mjs; do not edit here ---- */
+const KMCamera = (() => {
+// cameraSwitch.js — front/back camera switching for the live room.
+//
+// Real phones report facingMode, so we ask for the other side with `exact`. Desktops and
+// Chromium's fake cameras report none, so `exact` fails with OverconstrainedError and we
+// fall back to the next `videoinput` by deviceId. Many Android phones cannot hold two
+// cameras open, so the old track is stopped BEFORE the new one is opened. The new track is
+// published with replaceTrack (no renegotiation; audio untouched). If anything fails, the
+// previous camera is reopened so a failed switch never leaves the stream black.
+//
+// Wiring (mediasoup-client): replaceTrack: (track) => videoProducer.replaceTrack({ track })
+// (mediasoup-client takes an OBJECT; a plain RTCRtpSender takes the track itself).
+
+const BASE_VIDEO = { width: { ideal: 1280 }, height: { ideal: 720 } };
+
+// Mirror the local preview for the front camera only. A camera that reports no facing is
+// treated as front: that is a laptop webcam, which faces the user. Viewers are never sent a
+// mirrored stream; mirroring is a CSS transform on the local <video> only.
+const shouldMirror = (facing) => facing !== 'environment';
+
+const settingsOf = (track) => (track && typeof track.getSettings === 'function' ? track.getSettings() : {}) || {};
+
+function createCameraSwitcher({ mediaDevices, replaceTrack, onTrack = () => {}, video = BASE_VIDEO }) {
+  let track = null;
+  let busy = false;
+  let cameras = [];
+
+  const facingOf = (t) => settingsOf(t).facingMode;
+  const open = async (constraints) => {
+    const stream = await mediaDevices.getUserMedia({ audio: false, video: { ...video, ...constraints } });
+    return stream.getVideoTracks()[0];
+  };
+
+  // Usable cameras only: before permission is granted, ids (and labels) are blank.
+  async function refresh() {
+    try {
+      const list = await mediaDevices.enumerateDevices();
+      cameras = list.filter((d) => d.kind === 'videoinput' && d.deviceId);
+    } catch (_e) {
+      cameras = [];
+    }
+    return cameras.length;
   }
+
+  async function nextByDeviceId(currentId) {
+    await refresh();
+    if (cameras.length < 2) throw Object.assign(new Error('No other camera'), { name: 'NotFoundError' });
+    const i = cameras.findIndex((d) => d.deviceId === currentId);
+    const next = cameras[(i + 1) % cameras.length];
+    return open({ deviceId: { exact: next.deviceId } });
+  }
+
+  async function publish(t) {
+    await replaceTrack(t);
+    track = t;
+    const facing = facingOf(t);
+    onTrack(t, { facing, mirror: shouldMirror(facing) });
+    return facing;
+  }
+
+  async function switchCamera() {
+    if (busy) return { ok: false, error: 'busy' };
+    if (!track) return { ok: false, error: 'no camera' };
+    busy = true;
+    const old = track;
+    const { deviceId: oldId, facingMode: oldFacing } = settingsOf(old);
+    let fresh = null;
+    try {
+      old.stop(); // before opening the next one: many phones allow only one open camera
+      try {
+        fresh = await open({ facingMode: { exact: oldFacing === 'environment' ? 'user' : 'environment' } });
+      } catch (e) {
+        if (e?.name !== 'OverconstrainedError') throw e;
+        fresh = await nextByDeviceId(oldId);
+      }
+      const facing = await publish(fresh);
+      return { ok: true, track: fresh, facing, mirror: shouldMirror(facing) };
+    } catch (e) {
+      if (fresh) { try { fresh.stop(); } catch (_e) { /* already stopped */ } }
+      const error = `${e?.name || 'Error'}: ${e?.message || e}`;
+      try {
+        const back = await open(oldId ? { deviceId: { exact: oldId } } : {});
+        await publish(back);
+        return { ok: false, error, restored: true };
+      } catch (_e) {
+        track = null;
+        onTrack(null, { facing: undefined, mirror: false });
+        return { ok: false, error, restored: false };
+      }
+    } finally {
+      busy = false;
+    }
+  }
+
+  // Re-check the camera count now and whenever devices change; cb(canSwitch).
+  function watch(cb) {
+    let live = true;
+    const check = () => refresh().then(() => { if (live) cb(cameras.length >= 2); });
+    mediaDevices.addEventListener?.('devicechange', check);
+    check();
+    return () => { live = false; mediaDevices.removeEventListener?.('devicechange', check); };
+  }
+
+  return {
+    start(t) { track = t; },
+    refresh,
+    watch,
+    switchCamera,
+    get track() { return track; },
+    get canSwitch() { return cameras.length >= 2; },
+    get mirror() { return shouldMirror(facingOf(track)); },
+    get busy() { return busy; },
+  };
+}
+return { createCameraSwitcher, shouldMirror };
+})();
+/* ---- end camera switching ---- */
+
+// Front/back camera. The preview has no peer connection (its camera feeds only your own
+// tile), so "publishing" a new camera means swapping the video track inside myStream.
+let camSwitcher = null, camUnwatch = null;
+function setupCamSwitch(){
+  if(camUnwatch){ camUnwatch(); camUnwatch = null; }
+  camSwitcher = null;
+  const track = myStream && myStream.getVideoTracks()[0];
+  if(!track || !navigator.mediaDevices.enumerateDevices) return;
+  camSwitcher = KMCamera.createCameraSwitcher({
+    mediaDevices: navigator.mediaDevices,
+    replaceTrack: async (t) => {
+      myStream.getVideoTracks().forEach(old => myStream.removeTrack(old));
+      t.enabled = !document.getElementById('camBtn')?.classList.contains('off');   // keep 📷 off if it was off
+      myStream.addTrack(t);
+    },
+    onTrack: (t, { mirror }) => {
+      const video = document.getElementById('myVideo');
+      if(!video) return;
+      video.srcObject = myStream;                                                 // re-attach so the tile shows the new track
+      video.style.transform = mirror ? 'scaleX(-1)' : '';
+    },
+  });
+  camSwitcher.start(track);
+  const video = document.getElementById('myVideo');
+  if(video) video.style.transform = camSwitcher.mirror ? 'scaleX(-1)' : '';
+  camUnwatch = camSwitcher.watch((can) => {
+    const btn = document.getElementById('camFlipBtn');
+    if(btn) btn.style.display = can ? '' : 'none';
+  });
+}
+function teardownCamSwitch(){
+  if(camUnwatch){ camUnwatch(); camUnwatch = null; }
+  camSwitcher = null;
+}
+async function flipCamera(){
+  if(sharingScreen){ toast('Stop sharing your screen first'); return; }
+  if(!camSwitcher) return;
+  const r = await camSwitcher.switchCamera();
+  if(r.ok) toast(r.facing === 'environment' ? 'Back camera' : r.facing === 'user' ? 'Front camera' : 'Switched camera');
+  else if(r.error !== 'busy') toast(r.restored ? "Couldn't switch camera" : 'Camera is off — tap 📷 to try again');
 }
 
 let myCamStream = null;
@@ -2267,15 +2417,13 @@ function openLiveRoom(p, isHost){
   controls.innerHTML = `
     <button class="lr-btn" id="micBtn" onclick="toggleCtl('micBtn','Mic')">🎤</button>
     <button class="lr-btn" id="camBtn" onclick="toggleCtl('camBtn','Camera')">📷</button>
+    <button class="lr-btn" id="camFlipBtn" onclick="flipCamera()" title="Switch camera" aria-label="Switch camera" style="display:none">🔄</button>
     <button class="lr-btn" id="screenBtn" onclick="toggleScreenShare()">🖥️</button>
     <button class="lr-btn" id="wpBtn" onclick="toggleWatchParty()">📺</button>
     <button class="lr-btn" onclick="lrReact('🙋')">🙋</button>
     <button class="lr-btn" onclick="lrReact(['❤️','👏','🔥','😂'][Math.floor(Math.random()*4)])">😊</button>
     ${!isHost ? `<button class="lr-btn" onclick="openTipModal()" title="Send a tip">💰</button>` : ''}
     ${isHost ? `
-      <select class="cam-select" onchange="switchCamSource(this.value)">
-        <option value="user">Front Camera</option><option value="environment">Back Camera</option><option value="remote">Remote Guest Camera</option>
-      </select>
       <button class="lr-btn host-only" onclick="toggleStageLayout()" id="layoutBtn" title="Toggle layout">▦</button>
       <button class="lr-btn host-only" onclick="openInviteGuest()">🔗 Invite</button>
       <button class="lr-btn host-only" onclick="inviteGuest()">➕</button>
@@ -2460,6 +2608,7 @@ function lrReactVisual(emoji){
 }
 async function leaveRoom(){
   clearInterval(lrViewerTimer);
+  teardownCamSwitch();
   if(myStream){ myStream.getTracks().forEach(t=>t.stop()); myStream=null; }
   if(myCamStream){ myCamStream.getTracks().forEach(t=>t.stop()); myCamStream=null; }
   sharingScreen = false;

@@ -1,10 +1,17 @@
-# Camera switching (front / back) — drop-in for the React live room
+# Camera switching (front / back)
 
 `src/cameraSwitch.js` is the last preview feature missing from the React app. It is built and
 tested here as a standalone module because this repo does not yet contain the full
 `kims-marbles-frontend` (no `LiveRoom.jsx` / `mediaClient.js`). Once the app is in the repo,
 copy it to `kims-marbles-frontend/src/lib/cameraSwitch.js` (and the test next to it) and wire it
 in as below.
+
+**Already live in the single-file preview** (`salvage/marbleverse-preview.html`): the old
+Front/Back dropdown is replaced by a 🔄 button next to 📷. The preview carries a generated copy
+of the module (`node scripts/inline-into-preview.mjs` after any edit; `src/preview-sync.test.js`
+fails if the copy drifts). The old dropdown re-requested the microphone on every switch (an
+audio gap), used a non-`exact` `facingMode` (a laptop silently stayed on the same camera), and
+left a black 🚫 tile if the switch failed.
 
 ## What it does
 
@@ -58,8 +65,10 @@ track captured at first join, or a rebuild after a switch flips back to the old 
 
 ```bash
 npm install
-npm test               # 15 unit tests (fake mediaDevices)
-npm run test:browser   # 5 tests in real Chromium, real WebRTC, fake cameras
+npm test               # 16 unit tests (fake mediaDevices) incl. the preview sync check
+npm run test:browser   # 10 tests in real Chromium with fake cameras:
+                       #   e2e/camera-switch.test.mjs  5 — the module on a real RTCPeerConnection
+                       #   e2e/preview.test.mjs        5 — the 🔄 button inside the real preview
 ```
 
 Unit: `facingMode` success path; `OverconstrainedError` -> `deviceId` fallback and wrap-around;
@@ -77,6 +86,14 @@ audio is untouched; switching back returns to the first camera; the preview mirr
 one camera -> no switch offered. A permanent control (`?break=replace`) shows the viewer's
 video stalls without `replaceTrack`, and breaking `replaceTrack` inside the module fails the
 main test ("the sender is still on the old camera").
+
+Preview (real page, offline, live room opened as host): the 🔄 button shows with 2 cameras
+and not with 1; a switch leaves exactly one video track, live, from a different camera, stops
+the old one, keeps the same live mic track and never asks for audio again, and the tile keeps
+painting frames; a camera turned off with 📷 stays off after switching; the host's preview is
+mirrored. Mutation-checked: always showing the button, dropping the 📷-off carry-over, leaving
+the old track in the stream, and not mirroring on start were each caught. Screenshots at
+390x844 in dark and light were checked by eye: 🔄 is on screen and uncovered.
 
 ### Chromium fake-camera quirk (found by these tests)
 
@@ -99,5 +116,7 @@ the switcher (`e2e/harness.html`). Measured on Chromium 141 (Playwright build 11
 - Firefox / WebKit (Playwright exposes one fake camera there).
 - A camera that opens but produces no encodable frames (like `fake_device_1`) is reported as a
   successful switch; the module cannot see encoder output. Not seen on real phones.
+- The preview's Invite button label overflows its round button and is low-contrast in light mode
+  (pre-existing, not changed here).
 - Integration into `LiveRoom.jsx` itself, the full-app real-browser suite, and the reconnect
   rebuild with a switched camera: blocked until the full frontend is in this repo.
