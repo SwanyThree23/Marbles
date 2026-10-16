@@ -10,6 +10,8 @@ app.set('trust proxy', 1); // behind nginx: rate limits key on the real client I
 
 const origins = (process.env.CORS_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
 app.use(cors({ origin: origins.length ? origins : process.env.NODE_ENV !== 'production' }));
+// Stripe needs the exact raw bytes to verify a webhook's signature: mount it before express.json.
+app.post('/api/payments/webhook', express.raw({ type: 'application/json', limit: '1mb' }), require('./routes/payments').webhook);
 app.use(express.json({ limit: '100kb' }));
 
 app.get('/health', async (_req, res) => {
@@ -23,6 +25,23 @@ app.get('/health', async (_req, res) => {
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/listings', require('./routes/listings'));
+app.use('/api/offers', require('./routes/offers'));
+app.use('/api/collection', require('./routes/collection'));
+app.use('/api/rooms', require('./routes/rooms'));
+app.use('/api/battles', require('./routes/battles'));
+app.use('/api/feed', require('./routes/feed'));
+app.use('/api/conversations', require('./routes/messages'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/reports', require('./routes/reports'));
+app.use('/api/achievements', require('./routes/achievements'));
+app.use('/api/activity', require('./routes/activity'));
+app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/games', require('./routes/games'));
+app.use('/api/templates', require('./routes/templates'));
+app.use('/api/moderation', require('./routes/moderation'));
+app.use('/api/rtc', require('./routes/rtc'));
+app.use('/api/payments', require('./routes/payments'));
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
 

@@ -28,7 +28,7 @@ test('register returns the user and a working token pair; the password is never 
 
 test('register validates input', async () => {
   for (const bad of [
-    { ...good, handle: 'ab' }, { ...good, handle: 'has space' }, { ...good, handle: 'x'.repeat(25) },
+    { ...good, handle: 'a' }, { ...good, handle: 'has space' }, { ...good, handle: 'x'.repeat(25) },
     { ...good, email: 'not-an-email' }, { ...good, password: 'short' }, { ...good, password: 'x'.repeat(201) },
     { handle: 'NoEmail', password: 'password123' }, {},
   ]) {

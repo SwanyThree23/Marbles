@@ -5,7 +5,7 @@ create extension if not exists "uuid-ossp";
 -- ---------------------------------------------------------------- people
 create table users (
   id uuid primary key default uuid_generate_v4(),
-  handle text not null check (handle ~ '^[A-Za-z0-9_]{3,24}$'),
+  handle text not null check (handle ~ '^[A-Za-z0-9_]{2,24}$'),
   email text not null check (length(email) between 3 and 254),
   password_hash text not null,
   avatar_icon text not null default '👤',

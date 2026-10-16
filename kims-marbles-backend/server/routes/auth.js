@@ -18,7 +18,7 @@ const router = express.Router();
 const REFRESH_DAYS = 30;
 const GRACE_SECONDS = 10;           // a token rotated this recently may be presented again
 const BCRYPT_ROUNDS = 10;
-const HANDLE_RE = /^[A-Za-z0-9_]{3,24}$/;
+const HANDLE_RE = /^[A-Za-z0-9_]{2,24}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // compared against when the email is unknown, so a miss takes as long as a wrong password
 const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', BCRYPT_ROUNDS);
@@ -54,7 +54,7 @@ async function session(user) {
 
 router.post('/register', authLimiter, async (req, res, next) => {
   const { handle, email, password } = req.body || {};
-  if (!isStr(handle) || !HANDLE_RE.test(handle)) return res.status(400).json({ error: 'Handle must be 3-24 letters, numbers or underscores' });
+  if (!isStr(handle) || !HANDLE_RE.test(handle)) return res.status(400).json({ error: 'Handle must be 2-24 letters, numbers or underscores' });
   if (!isStr(email, 3, 254) || !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Enter a valid email address' });
   if (!isStr(password, 8, 200)) return res.status(400).json({ error: 'Password must be 8-200 characters' });
   try {
