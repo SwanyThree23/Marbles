@@ -7,6 +7,7 @@ const { writeLimiter } = require('../middleware/rateLimit');
 const { isUuid, isInt, isStr } = require('../validate');
 const { award } = require('../achievements');
 const { recordActivity } = require('../activity');
+const realtime = require('../realtime');
 
 const router = express.Router();
 const YT_RE = /^[\w-]{11}$/;
@@ -127,7 +128,10 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
       [room.id, status]
     );
     if (status === 'live') await wentLive(r.rows[0], req.user.id);
-    if (status === 'ended') await db.query('update room_participants set left_at = coalesce(left_at, now()) where room_id = $1', [room.id]);
+    if (status === 'ended') {
+      await db.query('update room_participants set left_at = coalesce(left_at, now()) where room_id = $1', [room.id]);
+      realtime.roomEnded(room.id);
+    }
     res.json({ ...r.rows[0], host_handle: room.host_handle });
   } catch (err) { next(err); }
 });

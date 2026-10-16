@@ -71,6 +71,12 @@ async function roomIsOpen(roomId) {
   return true;
 }
 
+// A room just ended: stop treating it as open at once (not after the 15 s cache expires).
+function forgetRoom(roomId) {
+  openCache.delete(roomId);
+  moderationCache.delete(roomId);
+}
+
 // ---- live-chat moderation ----
 const escapeRegExp = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // Whole-word, case-insensitive match, so blocking "ass" doesn't also block
@@ -152,4 +158,4 @@ function limited(socket, name, rule, handler, onLimit) {
 // is this socket currently a member of the Socket.io room?
 const inRoom = (socket, roomId) => typeof roomId === 'string' && socket.rooms.has(roomId);
 
-module.exports = { takeToken, resetBuckets, limited, guard, isUuid, isYoutubeId, isStr, isRoomHost, roomIsOpen, inRoom, findBlockedWord, getRoomModeration, invalidateModeration };
+module.exports = { takeToken, resetBuckets, limited, guard, isUuid, isYoutubeId, isStr, isRoomHost, roomIsOpen, forgetRoom, inRoom, findBlockedWord, getRoomModeration, invalidateModeration };

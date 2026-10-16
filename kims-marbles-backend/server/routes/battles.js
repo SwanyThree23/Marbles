@@ -7,6 +7,7 @@ const { isUuid, isInt, isStr } = require('../validate');
 const { award } = require('../achievements');
 const { recordActivity } = require('../activity');
 const { notify } = require('../notify');
+const realtime = require('../realtime');
 
 const router = express.Router();
 const BATTLE_SELECT = `
@@ -115,7 +116,7 @@ router.post('/:id/gift', requireAuth, writeLimiter, (req, res, next) => {
     await client.query('insert into battle_gifts (battle_id, sender_id, side, gift_name, points) values ($1, $2, $3, $4, $5)', [b.id, req.user.id, side, giftName, points]);
     const col = side === 'challenger' ? 'challenger_points' : 'opponent_points';
     const r = await client.query(`update battles set ${col} = ${col} + $2 where id = $1 returning *`, [b.id, points]);
-    return { ...r.rows[0], created: true };
+    return { ...r.rows[0], created: true, after: (full) => realtime.toRoom(`battle:${b.id}`, 'battle:update', full) };
   });
 });
 
@@ -125,7 +126,7 @@ router.post('/:id/end', requireAuth, (req, res, next) => withBattle(req, res, ne
   if (b.status !== 'live') return { httpStatus: 409, body: { error: 'This battle is not live' } };
   const winner = b.challenger_points > b.opponent_points ? b.challenger_id : b.opponent_points > b.challenger_points ? b.opponent_id : null;
   const r = await client.query("update battles set status = 'ended', ended_at = now(), winner_id = $2 where id = $1 returning *", [b.id, winner]);
-  return r.rows[0];
+  return { ...r.rows[0], after: (full) => realtime.toRoom(`battle:${b.id}`, 'battle:update', full) };
 }));
 
 module.exports = router;
