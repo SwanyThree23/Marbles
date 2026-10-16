@@ -139,6 +139,7 @@ main.page { max-width: 1200px; margin: 0 auto; padding: 20px max(16px, env(safe-
 /* text drawn over video stays white in both themes */
 .lr-tile-label { position: absolute; left: 6px; bottom: 6px; background: rgba(0, 0, 0, .65); color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 6px; font-weight: 600; }
 .lr-tile-badge { position: absolute; right: 6px; bottom: 6px; background: rgba(0, 0, 0, .65); color: #fff; font-size: 12px; padding: 2px 6px; border-radius: 6px; }
+.lr-tile-tools button { font-size: 14px; line-height: 1; padding: 4px 6px; border-radius: 6px; }
 .lr-side { width: 300px; border-left: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
 .lr-controls { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--panel); border-top: 1px solid var(--line); }
 .lr-btn { width: 46px; height: 46px; border-radius: 50%; padding: 0; font-size: 18px; display: inline-flex; align-items: center; justify-content: center; }
@@ -155,7 +156,7 @@ main.page { max-width: 1200px; margin: 0 auto; padding: 20px max(16px, env(safe-
 @media (prefers-reduced-motion: reduce) { .lc-float { animation-duration: .01s; } }
 @media (max-width: 760px) {
   .lr-body { flex-direction: column; }
-  .lr-side { width: auto; border-left: none; border-top: 1px solid var(--line); height: 38vh; }
+  .lr-side { width: auto; border-left: none; border-top: 1px solid var(--line); flex: 1; min-height: 38vh; }
   .lr-stage { grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 0 1 auto; }
   .page-head h1 { font-size: 30px; }
 }

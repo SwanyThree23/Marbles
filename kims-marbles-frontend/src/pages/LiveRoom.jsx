@@ -306,7 +306,7 @@ export default function LiveRoom({ room: initialRoom, onLeave }) {
             🛡️ <span className="mono">{flags.length}</span>
           </button>
         )}
-        <button className="lr-btn leave" onClick={leave}>{isHost ? 'End' : 'Leave'}</button>
+        <button className="lr-btn leave" onClick={leave}>{isHost ? 'End stream' : 'Leave'}</button>
       </div>
       {status === 'reconnecting' && <div role="status" className="lc-flag" style={{ margin: 8 }}>Connection lost. Reconnecting…</div>}
       {notice && (
@@ -385,9 +385,9 @@ function Tile({ t, isHostTile, muted, camOff, hostControls, onMute, onCamera }) 
       <span className="lr-tile-label">{isHostTile ? '★ ' : ''}{t.handle}{t.self ? ' (you)' : ''}</span>
       {(muted || camOff) && <span className="lr-tile-badge">{muted ? '🔇' : ''}{camOff ? '📷✕' : ''}</span>}
       {hostControls && (
-        <span className="row" style={{ position: 'absolute', top: 6, right: 6, gap: 4 }}>
-          <button title={muted ? `Unmute ${t.handle}` : `Mute ${t.handle}`} onClick={onMute} style={{ padding: '2px 6px' }}>{muted ? '🔈' : '🔇'}</button>
-          <button title={camOff ? `Turn ${t.handle}'s camera on` : `Turn ${t.handle}'s camera off`} onClick={onCamera} style={{ padding: '2px 6px' }}>📷</button>
+        <span className="row lr-tile-tools" style={{ position: 'absolute', top: 6, right: 6, gap: 4 }}>
+          <button title={muted ? `Unmute ${t.handle}` : `Mute ${t.handle}`} onClick={onMute}>{muted ? '🔈' : '🔇'}</button>
+          <button title={camOff ? `Turn ${t.handle}'s camera on` : `Turn ${t.handle}'s camera off`} onClick={onCamera}>📷</button>
         </span>
       )}
     </div>

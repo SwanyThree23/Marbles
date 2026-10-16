@@ -68,7 +68,8 @@ async function main() {
     console.log(`[server] ${signal}: shutting down`);
     const force = setTimeout(() => process.exit(1), 5000);
     force.unref();
-    io.disconnectSockets(true);
+    // close the connections without a "disconnect" packet: socket.io clients treat that packet
+    // as "you were kicked" and never reconnect, so a deploy would strand every viewer
     await new Promise((r) => io.close(() => r()));
     await workers.closeWorkers();
     await db.pool.end().catch(() => {});

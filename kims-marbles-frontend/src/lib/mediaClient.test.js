@@ -28,10 +28,11 @@ class FakeTransport {
   on(ev, fn) { this.l[ev] = fn; }
   close() { this.closed = true; }
   async consume({ id, producerId, kind }) { return { id, producerId, kind, track: { kind, id: `track-${producerId}` }, closed: false, close() { this.closed = true; } }; }
-  async produce({ track, appData }) {
+  async produce({ track, appData, stopTracks = true }) {
     await new Promise((res, rej) => this.l.connect ? this.l.connect({ dtlsParameters: { d: 1 } }, res, rej) : res());
     const { id } = await new Promise((res, rej) => this.l.produce({ kind: track.kind, rtpParameters: { r: 1 }, appData }, res, rej));
-    return { id, kind: track.kind, closed: false, close() { this.closed = true; }, replaceTrack: vi.fn(async () => {}), on() {} };
+    // like mediasoup-client: closing a producer stops its track unless stopTracks is false
+    return { id, kind: track.kind, closed: false, close() { this.closed = true; if (stopTracks) track.readyState = 'ended'; }, replaceTrack: vi.fn(async () => {}), on() {} };
   }
 }
 const devices = [];

@@ -60,7 +60,7 @@ export default function Messages() {
                   </button>
                 ))}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: '1 1 300px', minWidth: 0 }}>
           {withId ? <Thread key={withId} otherId={withId} me={user?.id} onSent={loadInbox} /> : <div className="empty-state">Pick a conversation, or message someone by their handle.</div>}
         </div>
       </div>

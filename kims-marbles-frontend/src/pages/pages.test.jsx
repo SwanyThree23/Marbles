@@ -101,6 +101,7 @@ describe('Marketplace', () => {
     renderAt('/market?template=t9', <Marketplace />);
     await waitFor(() => expect(screen.getByPlaceholderText('Name').value).toBe('Lutz Template'));
     expect(screen.getByPlaceholderText('Price ($)').value).toBe('19.99');
+    expect(screen.getByPlaceholderText('Name').value).toBe('Lutz Template');
     expect(screen.getByPlaceholderText('Description').value).toBe('copper bands');
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/market'));
   });

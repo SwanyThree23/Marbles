@@ -111,7 +111,8 @@ export function createMediaClient({ socket, roomId, Device, getIceConfig = async
     if (!send) send = await makeTransport('send');
     const old = producers.get(source);
     if (old) { await unpublish(source); }
-    const producer = await send.produce({ track, appData: { source, ...(takeover ? { takeover: true } : {}) } });
+    // stopTracks: false — the page owns its camera; a reconnect must be able to send it again
+    const producer = await send.produce({ track, stopTracks: false, appData: { source, ...(takeover ? { takeover: true } : {}) } });
     producers.set(source, producer);
     sending.set(source, track);
     producer.on?.('transportclose', () => producers.delete(source));

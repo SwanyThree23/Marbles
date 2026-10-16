@@ -7,10 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:browser": "node --test --test-concurrency=1 --test-timeout=240000 e2e-browser/*.test.mjs"
   },
   "dependencies": {
-    "mediasoup-client": "^3.11.0",
+    "mediasoup-client": "3.23.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",

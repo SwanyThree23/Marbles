@@ -9,6 +9,8 @@ import Modal from '../components/Modal';
 
 const TYPES = [['sale', 'For Sale'], ['trade', 'Trade Only'], ['auction', 'Auction']];
 const GRADES = [['mint', 'Mint'], ['near-mint', 'Near Mint'], ['good', 'Good']];
+// 4200 -> "42", 1999 -> "19.99" (how the form shows a saved price)
+const dollars = (cents) => (cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2));
 const blankForm = { name: '', category: 'Swirl', grade: 'mint', type: 'sale', price: '50', description: '' };
 
 export default function Marketplace() {
@@ -47,7 +49,7 @@ export default function Marketplace() {
     handled.current = templateId;
     apiFetch('/api/templates').then((list) => {
       const t = list.find((x) => x.id === templateId);
-      if (t) setForm({ name: t.name, category: t.category, grade: t.grade, type: t.type, price: (t.price_cents / 100).toFixed(2), description: t.description });
+      if (t) setForm({ name: t.name, category: t.category, grade: t.grade, type: t.type, price: dollars(t.price_cents), description: t.description });
       else toast('That template no longer exists');
     }).catch((err) => toast(err.message)).finally(() => navigate('/market', { replace: true }));
   }, [templateId, navigate, toast]);
@@ -74,7 +76,7 @@ export default function Marketplace() {
           <button className="primary-btn" onClick={() => setForm({ ...blankForm })}>＋ List a Marble</button>
         </div>
       </div>
-      <input type="search" aria-label="Search listings by name" placeholder="Search listings by name…" value={q} onChange={(e) => setQ(e.target.value)} style={{ marginBottom: 12 }} />
+      <input type="search" aria-label="Search listings by name" placeholder="Search marbles…" value={q} onChange={(e) => setQ(e.target.value)} style={{ marginBottom: 12 }} />
       <div className="row" role="group" aria-label="Filter listings" style={{ marginBottom: 14 }}>
         {[['all', 'All'], ...CATEGORIES.map((c) => [c, c]), ['auction', '🔨 Live Auctions']].map(([v, label]) => (
           <button key={v} aria-pressed={filter === v} className={filter === v ? 'accent-btn' : ''} onClick={() => setFilter(v)}>{label}</button>
