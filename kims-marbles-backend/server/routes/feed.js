@@ -73,7 +73,7 @@ router.get('/:id/comments', async (req, res, next) => {
   try {
     if (!(await postExists(req.params.id))) return res.status(404).json({ error: 'Post not found' });
     const r = await db.query(
-      `select c.id, c.text, c.created_at, u.handle as author_handle from post_comments c
+      `select c.id, c.text, c.created_at, c.author_id, u.handle as author_handle from post_comments c
        join users u on u.id = c.author_id where c.post_id = $1 order by c.created_at, c.id limit 200`,
       [req.params.id]
     );
@@ -88,6 +88,18 @@ router.post('/:id/comments', requireAuth, writeLimiter, async (req, res, next) =
     if (!(await postExists(req.params.id))) return res.status(404).json({ error: 'Post not found' });
     const r = await db.query('insert into post_comments (post_id, author_id, text) values ($1, $2, $3) returning *', [req.params.id, req.user.id, text]);
     res.status(201).json({ ...r.rows[0], author_handle: req.user.handle });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/feed/comments/:id — the comment's author, or an admin acting on a report
+router.delete('/comments/:id', requireAuth, async (req, res, next) => {
+  if (!isUuid(req.params.id)) return res.status(404).json({ error: 'Comment not found' });
+  try {
+    const c = (await db.query('select author_id from post_comments where id = $1', [req.params.id])).rows[0];
+    if (!c) return res.status(404).json({ error: 'Comment not found' });
+    if (c.author_id !== req.user.id && !req.user.is_admin) return res.status(403).json({ error: 'You can only delete your own comments' });
+    await db.query('delete from post_comments where id = $1', [req.params.id]);
+    res.status(204).end();
   } catch (err) { next(err); }
 });
 

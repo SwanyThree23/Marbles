@@ -180,6 +180,29 @@ describe('Feed', () => {
   });
 });
 
+describe('Feed comments', () => {
+  test('my comments get Delete, other people\'s get ⚑ Report; delete updates the list and the count', async () => {
+    const user = userEvent.setup();
+    routes['GET /api/feed'] = [{ id: 'p1', text: 'haul', author_id: 'someone', author_handle: 'Ann', like_count: 0, comment_count: 2, liked_by_me: false, created_at: new Date().toISOString() }];
+    routes['GET /api/collection'] = [];
+    routes['GET /api/feed/p1/comments'] = [
+      { id: 'c1', text: 'mine', author_id: me.id, author_handle: 'Kim', created_at: '' },
+      { id: 'c2', text: 'theirs', author_id: 'x', author_handle: 'Bob', created_at: '' },
+    ];
+    routes['DELETE /api/feed/comments/c1'] = () => null;
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderAt('/feed', <Feed />);
+    await user.click(await screen.findByRole('button', { name: '💬 2' }));
+    const theirs = (await screen.findByText('theirs')).closest('.comment');
+    expect(within(theirs).getByTitle('Report this comment')).toBeTruthy();
+    expect(within(theirs).queryByRole('button', { name: /Delete/ })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Delete comment by Kim' }));
+    await waitFor(() => expect(screen.queryByText('mine')).toBeNull());
+    expect(screen.getByRole('button', { name: '💬 1' })).toBeTruthy();
+    confirm.mockRestore();
+  });
+});
+
 describe('Panels', () => {
   test('Go Live creates a live room titled "<handle>\'s Stream" and opens /live/<id>', async () => {
     const user = userEvent.setup();

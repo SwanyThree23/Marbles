@@ -186,3 +186,27 @@ test('reports: anyone logged in can file one (validated); only admins see the qu
   assert.equal(done.body.resolved_by, mod.id);
   assert.equal((await api().get('/api/reports?status=open').set(as(mod))).body.length, 0);
 });
+
+test('comments: the author or an admin can delete one; nobody else; the post\'s count follows', async () => {
+  const a = await user('Author'); const c = await user('Commenter'); const x = await user('Stranger'); const admin = await user('Admin', { admin: true });
+  const p = (await api().post('/api/feed').set(as(a)).send({ text: 'my haul' })).body;
+  const c1 = (await api().post(`/api/feed/${p.id}/comments`).set(as(c)).send({ text: 'first' })).body;
+  const c2 = (await api().post(`/api/feed/${p.id}/comments`).set(as(c)).send({ text: 'buy followers here' })).body;
+  assert.equal((await api().delete(`/api/feed/comments/${c1.id}`).set(as(x))).status, 403);
+  assert.equal((await api().delete(`/api/feed/comments/${c1.id}`)).status, 401);
+  assert.equal((await api().delete(`/api/feed/comments/${c1.id}`).set(as(c))).status, 204);
+  assert.equal((await api().delete(`/api/feed/comments/${c2.id}`).set(as(admin))).status, 204);
+  assert.equal((await api().delete(`/api/feed/comments/${c2.id}`).set(as(admin))).status, 404);
+  assert.equal((await api().delete('/api/feed/comments/nope').set(as(admin))).status, 404);
+  assert.deepEqual((await api().get(`/api/feed/${p.id}/comments`)).body, []);
+  assert.equal((await api().get('/api/feed')).body[0].comment_count, 0);
+});
+
+test('comments carry their id and author id, so the app can offer delete or report', async () => {
+  const a = await user('Author');
+  const p = (await api().post('/api/feed').set(as(a)).send({ text: 'x' })).body;
+  await api().post(`/api/feed/${p.id}/comments`).set(as(a)).send({ text: 'hi' });
+  const [c] = (await api().get(`/api/feed/${p.id}/comments`)).body;
+  assert.ok(c.id);
+  assert.equal(c.author_id, a.id);
+});

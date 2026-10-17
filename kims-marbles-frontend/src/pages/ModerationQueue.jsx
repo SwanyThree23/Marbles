@@ -1,4 +1,4 @@
-// Admins only: reports from the community. "Remove" takes a reported listing or post down
+// Admins only: reports from the community. "Remove" takes a reported listing, post or comment down
 // (and marks the report actioned); "Dismiss" closes it without action.
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 
 const OWNER = { listing: 'seller', post: 'author', comment: 'author', panel: 'host', user: 'person' };
-const REMOVABLE = { listing: (id) => `/api/listings/${id}`, post: (id) => `/api/feed/${id}` };
+const REMOVABLE = { listing: (id) => `/api/listings/${id}`, post: (id) => `/api/feed/${id}`, comment: (id) => `/api/feed/comments/${id}` };
 
 export default function ModerationQueue() {
   const { user } = useAuth();

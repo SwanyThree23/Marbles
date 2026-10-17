@@ -77,6 +77,7 @@ export default function Feed() {
 
 function Post({ p, mine, onLike, onDelete }) {
   const toast = useToast();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [comments, setComments] = useState(null);
   const [reply, setReply] = useState('');
@@ -88,6 +89,13 @@ function Post({ p, mine, onLike, onDelete }) {
     if (next && comments === null) {
       try { setComments(await apiFetch(`/api/feed/${p.id}/comments`)); } catch (e) { toast(e.message); setComments([]); }
     }
+  }
+  async function removeComment(c) {
+    if (!window.confirm('Delete this comment?')) return;
+    try {
+      await apiFetch(`/api/feed/comments/${c.id}`, { method: 'DELETE' });
+      setComments((l) => l.filter((x) => x.id !== c.id)); setCount((n) => Math.max(0, n - 1));
+    } catch (err) { toast(err.message); }
   }
   async function send(e) {
     e.preventDefault();
@@ -113,7 +121,14 @@ function Post({ p, mine, onLike, onDelete }) {
       </div>
       {open && (
         <div className="stack" style={{ gap: 6 }}>
-          {comments === null ? <span className="muted">Loading…</span> : comments.map((c) => <div key={c.id} style={{ fontSize: 14 }}><b>{c.author_handle}</b> {c.text}</div>)}
+          {comments === null ? <span className="muted">Loading…</span> : comments.map((c) => (
+            <div key={c.id} className="comment row" style={{ fontSize: 14, justifyContent: 'space-between', flexWrap: 'nowrap' }}>
+              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}><b>{c.author_handle}</b> {c.text}</span>
+              {c.author_id === user?.id || user?.is_admin
+                ? <button className="link-btn" aria-label={`Delete comment by ${c.author_handle}`} onClick={() => removeComment(c)}>Delete</button>
+                : <ReportButton targetType="comment" targetId={c.id} targetLabel={`${c.author_handle}: ${c.text}`}>⚑</ReportButton>}
+            </div>
+          ))}
           <form className="row" onSubmit={send}>
             <input aria-label="Write a comment" placeholder="Write a comment…" maxLength={1000} value={reply} onChange={(e) => setReply(e.target.value)} style={{ flex: 1 }} />
             <button type="submit">Reply</button>

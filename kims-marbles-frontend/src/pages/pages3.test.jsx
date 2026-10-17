@@ -236,3 +236,19 @@ describe('watch party sync', () => {
     } finally { vi.useRealTimers(); }
   });
 });
+
+describe('comment moderation', () => {
+  test('an admin removes a reported comment: the comment is deleted, then the report is closed', async () => {
+    const user = userEvent.setup();
+    me = { ...me, is_admin: true };
+    routes['GET /api/reports'] = [{ id: 'r7', target_type: 'comment', target_id: 'c1', target_label: 'Bob: rude', reason: 'Harassment or hate', details: '', reporter_handle: 'Ann', status: 'open', created_at: '2026-10-01T00:00:00Z' }];
+    routes['DELETE /api/feed/comments/c1'] = () => null;
+    routes['PATCH /api/reports/r7'] = (b) => b;
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    wrap(<ModerationQueue />);
+    await user.click(await screen.findByRole('button', { name: 'Remove comment' }));
+    await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true));
+    expect(calls.filter((c) => c.method !== 'GET').map((c) => `${c.method} ${c.path}`)).toEqual(['DELETE /api/feed/comments/c1', 'PATCH /api/reports/r7']);
+    confirm.mockRestore();
+  });
+});
