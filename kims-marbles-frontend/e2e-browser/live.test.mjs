@@ -29,7 +29,7 @@ test('video plays both ways, each side hears an audio track, over one send and o
     }
     const pairs = await candidateTypes(guestPage);
     assert.equal(pairs.length, 2, `expected a send and a receive connection, got ${JSON.stringify(pairs)}`);
-    for (const p of pairs) assert.notEqual(p.local, 'relay', 'no TURN is configured, so nothing should be relayed');
+    if (!process.env.E2E_TURN) for (const p of pairs) assert.notEqual(p.local, 'relay', 'no TURN is configured, so nothing should be relayed');
     assert.deepEqual([...await tiles(hostPage)].sort(), [`★ ${host.handle} (you)`, guest.handle].sort());
     assert.deepEqual([...hostPage.errors, ...guestPage.errors], []);
   } finally { await cleanup(); }

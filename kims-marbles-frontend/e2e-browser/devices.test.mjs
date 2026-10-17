@@ -51,7 +51,7 @@ test('the device list is live: a second device appears, and disappears when it g
     await until(async () => /2 devices/.test(await devicesText(desktop)), { what: 'the second device to appear' });
     assert.match(await devicesText(desktop), /this device/);
     await phone.context().close();                                                    // the phone goes away
-    await until(async () => /Only this device/.test(await devicesText(desktop)), { timeout: 10_000, what: 'the second device to disappear' });
+    await until(async () => /Only this device/.test(await devicesText(desktop)), { timeout: 25_000, what: 'the second device to disappear' });
   } finally { await cleanup(); }
 });
 

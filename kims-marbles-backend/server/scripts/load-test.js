@@ -108,7 +108,7 @@ async function metrics() {
   const lost = expected.n - received;
   console.log('\nresults');
   console.log(`  chat: ${sent} messages sent, ${received} deliveries of ${expected.n} expected (${((received / expected.n) * 100).toFixed(2)}%), ${lost} missing`);
-  console.log(`  chat delivery latency: p50 ${ms(pct(delivered, 50))}, p95 ${ms(pct(delivered, 95))}, p99 ${ms(pct(delivered, 99))}, max ${ms(Math.max(...delivered))}`);
+  console.log(`  chat delivery latency: p50 ${ms(pct(delivered, 50))}, p95 ${ms(pct(delivered, 95))}, p99 ${ms(pct(delivered, 99))}, max ${ms(delivered.reduce((a, b) => (b > a ? b : a), 0))}`);
   console.log(`  chat fan-out rate: ${(received / SECONDS).toFixed(0)} deliveries/s`);
   console.log(`  HTTP: ${httpLat.length} requests, ${(httpLat.length / SECONDS).toFixed(0)} req/s, errors ${httpErrors}, p50 ${ms(pct(httpLat, 50))}, p95 ${ms(pct(httpLat, 95))}, p99 ${ms(pct(httpLat, 99))}`);
   if (before && during) console.log(`  server memory: ${before.rssMB.toFixed(0)} MB idle → ${during.rssMB.toFixed(0)} MB under load; sockets seen by server: ${during.sockets}`);

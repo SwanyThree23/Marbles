@@ -34,6 +34,9 @@ async function main() {
   const io = new Server(server, {
     cors: { origin: origins.length ? origins : process.env.NODE_ENV !== 'production' },
     maxHttpBufferSize: 256 * 1024,
+    // a phone that drops off the network sends no goodbye: notice it within ~20 s (default ~45 s)
+    pingInterval: 10_000,
+    pingTimeout: 10_000,
   });
 
   realtime.setIo(io);
