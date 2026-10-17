@@ -37,7 +37,9 @@ test('a fresh database gets the whole schema (with RLS) and a record of it; runn
   assert.match(r.stdout, /applied 0001_initial/);
   const tables = (await q(DBS[0], "select count(*)::int as n from pg_tables where schemaname = 'public' and rowsecurity")).at(0).n;
   assert.ok(tables >= 30, `expected RLS on 30+ tables, got ${tables}`);
-  assert.deepEqual((await q(DBS[0], 'select version from schema_migrations order by version')).map((x) => x.version), ['0001_initial']);
+  // every real migration also applies cleanly on top of a fresh schema
+  const shipped = fs.readdirSync(path.join(__dirname, '..', '..', 'migrations')).filter((f) => /^\d{4}_.*\.sql$/.test(f)).map((f) => f.replace(/\.sql$/, '')).sort();
+  assert.deepEqual((await q(DBS[0], 'select version from schema_migrations order by version')).map((x) => x.version), ['0001_initial', ...shipped]);
   const again = migrate(DBS[0]);
   assert.equal(again.status, 0, again.stderr);
   assert.match(again.stdout, /up to date/);
