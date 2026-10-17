@@ -206,6 +206,24 @@ broken. It names the problem in the log without printing any secret. It refuses:
 - a private media IP
 - `http://` for `APP_URL`
 
+## How many viewers
+
+Measured with the real media server (see `READINESS.md`):
+
+- **CPU is not the limit.** Forwarding one video or audio stream to one viewer costs about
+  0.05% of a CPU core.
+- **Upload bandwidth is the limit.** Every viewer receives every person on stage, at roughly
+  0.7 Mbit/s per person with video.
+
+  | On stage | Per viewer | 100 viewers need | 500 viewers need |
+  |---|---|---|---|
+  | 2 people | ~1.4 Mbit/s | ~140 Mbit/s | ~700 Mbit/s |
+  | 6 people | ~4.2 Mbit/s | ~420 Mbit/s | ~2.1 Gbit/s (too much for one VPS) |
+
+Check your plan's network port speed and monthly traffic allowance in the Hostinger panel.
+The live figures are on `/metrics`: `km_sfu_consumers` is the number of streams being
+forwarded right now.
+
 ## Limits to know about
 
 - **One server process.** Live rooms, video and rate limits live in that process's memory.

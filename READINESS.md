@@ -52,9 +52,14 @@ confirm a test fails.
 - **Real phones on real networks.** Tested so far: Chromium's fake camera, loopback
   networking and TURN on loopback. Not tested: iOS Safari, Android Chrome, cellular data,
   or real NATs. First thing to try once it's live.
-- **Video capacity of the VPS.** Not measured: a real load test with many real video
-  streams. Chat, API and connections were measured; video fan-out (each viewer receiving
-  each person on stage) is the expected ceiling.
+- **Video capacity of the real VPS.** Measured here instead (`e2e-browser/capacity.mjs`):
+  2 people on stage, up to 16 browser viewers, 68 streams forwarded.
+  - CPU: about 0.05% of one core per forwarded stream.
+  - Bandwidth: each viewer of a 2-person stage receives about 1.4 Mbit/s.
+  - Projection: the CPU of a KVM 2 could forward a couple of thousand streams. The
+    server's upload bandwidth runs out long before that. See DEPLOY.md, "How many viewers".
+  - Caveats: loopback networking, Chromium's fake camera (a low-motion picture), and this
+    build machine's CPU rather than the VPS's.
 - **GitHub Actions CI.** The workflow is written but has not run on GitHub yet.
 
 ## Known gaps and limits
