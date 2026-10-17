@@ -4,7 +4,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { APP, T, startBrowser, stopBrowser, until, newUser, openPage, twoPeople, cleanup } from './helpers.mjs';
+import { APP, T, startBrowser, stopBrowser, sleep, until, newUser, openPage, cleanup } from './helpers.mjs';
 
 before(startBrowser);
 after(stopBrowser);
@@ -48,51 +48,104 @@ test('a post reported by one person shows up for a moderator, who removes it for
   } finally { await cleanup(); }
 });
 
-const STUB = `<!doctype html><html><body>player stub<script>
-  addEventListener('message', (e) => parent.postMessage({ stubGot: e.data }, '*'));
-</script></body></html>`;
-async function stubYoutube(page) {
-  await page.route('https://www.youtube-nocookie.com/**', (route) => route.fulfill({ contentType: 'text/html', body: STUB }));
-  await page.addInitScript(() => {
-    window.__playerCmds = [];
-    addEventListener('message', (e) => { if (e.data && e.data.stubGot) window.__playerCmds.push(JSON.parse(e.data.stubGot).func); });
+// A stand-in for YouTube's embedded player that speaks its real postMessage protocol (checked
+// against the real embed): it answers "listening" with onReady, reports infoDelivery
+// {currentTime, playerState} every 250 ms, obeys playVideo / pauseVideo / seekTo, and starts
+// playing by itself like autoplay=1. RATE < 1 makes a player that falls behind.
+const stub = (rate = 1) => `<!doctype html><html><body style="background:#111;color:#eee">player stub<script>
+  let t = 0, state = 1, last = performance.now(), ready = false;
+  const tick = () => { const n = performance.now(); if (state === 1) t += ((n - last) / 1000) * ${rate}; last = n; };
+  const tell = () => { tick(); parent.postMessage(JSON.stringify({ event: 'infoDelivery', info: { currentTime: t, playerState: state } }), '*'); };
+  window.stubTime = () => { tick(); return { t, state }; };
+  addEventListener('message', (e) => {
+    let m; try { m = JSON.parse(e.data); } catch (_) { return; }
+    if (m.event === 'listening' && !ready) { ready = true; parent.postMessage(JSON.stringify({ event: 'onReady', id: m.id }), '*'); setInterval(tell, 250); return; }
+    if (m.event !== 'command') return;
+    tick();
+    if (m.func === 'playVideo') state = 1;
+    if (m.func === 'pauseVideo') state = 2;
+    if (m.func === 'seekTo') t = m.args[0];
+    tell();
   });
+</script></body></html>`;
+async function stubYoutube(page, rate = 1) {
+  await page.route('https://www.youtube-nocookie.com/**', (route) => route.fulfill({ contentType: 'text/html', body: stub(rate) }));
+}
+const playerTime = async (page) => {
+  const f = page.frames().find((x) => x.url().startsWith('https://www.youtube-nocookie.com/'));
+  return f ? f.evaluate(() => window.stubTime()) : null;
+};
+async function gap(a, b) {
+  const [x, y] = await Promise.all([playerTime(a), playerTime(b)]);
+  return x && y ? { gap: Math.abs(x.t - y.t), a: x, b: y } : null;
 }
 
-test('watch party: the host plays a link for everyone and controls every viewer\'s player; a viewer can suggest one', T, async () => {
+test('watch party: everyone stays at the same second: play, pause, a late joiner, and a slow player', { timeout: 240_000 }, async () => {
   try {
+    const { goLive, joinFromList } = await import('./helpers.mjs');
     const host = await newUser('host'); const guest = await newUser('guest');
     const hostPage = await openPage(host); const guestPage = await openPage(guest);
     await stubYoutube(hostPage); await stubYoutube(guestPage);
-    const { goLive, joinFromList } = await import('./helpers.mjs');
     await goLive(hostPage);
     await joinFromList(guestPage, `${host.handle}'s Stream`);
 
+    // a viewer suggests; the host sees it
     await guestPage.getByTitle('Watch party').click();
     await guestPage.getByLabel('YouTube link').fill('https://www.youtube.com/watch?v=aaaaaaaaaaa');
     await guestPage.getByLabel('Video title (optional)').fill('Guest pick');
     await guestPage.getByRole('button', { name: 'Suggest to the host' }).click();
-
     await hostPage.getByTitle('Watch party').click();
     await hostPage.locator('.wp-queue-item', { hasText: 'Guest pick' }).waitFor({ timeout: 10_000 });
+
     await hostPage.getByLabel('YouTube link').fill('https://youtu.be/dQw4w9WgXcQ');
     await hostPage.getByLabel('Video title (optional)').fill('Marble run finals');
     await hostPage.getByRole('button', { name: 'Play for everyone' }).click();
+    assert.match(await guestPage.getByTitle('Watch party: Marble run finals').getAttribute('src'), /^https:\/\/www\.youtube-nocookie\.com\/embed\/dQw4w9WgXcQ\?/);
+    await sleep(4000);
+    let g = await gap(hostPage, guestPage);
+    assert.ok(g && g.gap < 1.5 && g.a.state === 1 && g.b.state === 1, `both playing together: ${JSON.stringify(g)}`);
 
-    const frame = guestPage.getByTitle('Watch party: Marble run finals');
-    await frame.waitFor({ timeout: 10_000 });
-    assert.match(await frame.getAttribute('src'), /^https:\/\/www\.youtube-nocookie\.com\/embed\/dQw4w9WgXcQ\?/);
-    await guestPage.waitForTimeout(500); // the stub frame loads
     await hostPage.getByTitle('Pause for everyone').click();
-    await hostPage.getByTitle('From the start for everyone').click();
-    await until(async () => (await guestPage.evaluate(() => window.__playerCmds.join(','))) === 'pauseVideo,seekTo,playVideo', { what: "the guest's player to get pause, then restart" });
-    assert.equal(await guestPage.getByTitle('Pause for everyone').count(), 0, 'viewers do not get the controls');
+    await until(async () => { const x = await gap(hostPage, guestPage); return x && x.b.state === 2 && x.gap < 0.6; }, { what: 'the guest to pause at the host\'s second' });
+    const pausedAt = (await playerTime(guestPage)).t;
+    await sleep(1500);
+    assert.ok(Math.abs((await playerTime(guestPage)).t - pausedAt) < 0.05, 'stays paused');
 
-    // someone arriving later sees what is playing
+    await hostPage.getByTitle('Play for everyone').click();
+    await sleep(4000);   // the host's heartbeat has moved the room clock on by now
+
+    // a late joiner starts where everyone is, not at 0
     const late = await newUser('late'); const latePage = await openPage(late); await stubYoutube(latePage);
     await joinFromList(latePage, `${host.handle}'s Stream`);
     await latePage.getByTitle('Watch party: Marble run finals').waitFor({ timeout: 10_000 });
-    assert.deepEqual([...hostPage.errors, ...guestPage.errors, ...latePage.errors], []);
-    void twoPeople;
+    await until(async () => { const x = await gap(hostPage, latePage); return x && x.b.t > 5 && x.gap < 1.5; }, { timeout: 15_000, what: 'the late joiner to catch up' });
+
+    // a player that runs slow (60% speed) is kept in step by corrections
+    const slow = await newUser('slow'); const slowPage = await openPage(slow); await stubYoutube(slowPage, 0.6);
+    await joinFromList(slowPage, `${host.handle}'s Stream`);
+    await slowPage.getByTitle('Watch party: Marble run finals').waitFor({ timeout: 10_000 });
+    await sleep(15_000);   // uncorrected, it would now be ~6 s behind
+    g = await gap(hostPage, slowPage);
+    assert.ok(g && g.gap < 2.5, `the slow player is kept within a couple of seconds: ${JSON.stringify(g)}`);
+    assert.equal(await guestPage.getByTitle('Pause for everyone').count(), 0, 'viewers do not get the controls');
+    assert.deepEqual([...hostPage.errors, ...guestPage.errors, ...latePage.errors, ...slowPage.errors], []);
+  } finally { await cleanup(); }
+});
+
+test('watch party: when the HOST\'s player falls behind (buffering), viewers follow the host, not a perfect clock', { timeout: 180_000 }, async () => {
+  try {
+    const { goLive, joinFromList } = await import('./helpers.mjs');
+    const host = await newUser('host'); const guest = await newUser('guest');
+    const hostPage = await openPage(host); const guestPage = await openPage(guest);
+    await stubYoutube(hostPage, 0.7); await stubYoutube(guestPage, 1);
+    await goLive(hostPage);
+    await joinFromList(guestPage, `${host.handle}'s Stream`);
+    await hostPage.getByTitle('Watch party').click();
+    await hostPage.getByLabel('YouTube link').fill('dQw4w9WgXcQ');
+    await hostPage.getByRole('button', { name: 'Play for everyone' }).click();
+    await guestPage.getByTitle(/Watch party:/).waitFor({ timeout: 10_000 });
+    await sleep(16_000);   // without the host's heartbeat the guest would now be ~5 s ahead
+    const g = await gap(hostPage, guestPage);
+    assert.ok(g && g.gap < 2.5, `the guest stays with the host: ${JSON.stringify(g)}`);
   } finally { await cleanup(); }
 });

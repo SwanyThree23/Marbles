@@ -196,10 +196,11 @@ test('watch party over the socket: host only, real YouTube ids only', async () =
   const got = waitFor(gs, 'watchparty:load');
   hs.emit('watchparty:load', { roomId: room.id, youtubeId: 'dQw4w9WgXcQ', title: 'Akro' });
   assert.equal((await got).youtubeId, 'dQw4w9WgXcQ');
+  await rest(server, host, 'POST', `/api/rooms/${room.id}/watchparty/load`, { youtubeId: 'dQw4w9WgXcQ', title: 'Akro' });
   const ctl = waitFor(gs, 'watchparty:control');
-  hs.emit('watchparty:control', { roomId: room.id, action: 'pause' });
+  hs.emit('watchparty:control', { roomId: room.id, action: 'pause', position: 3 });
   assert.equal((await ctl).action, 'pause');
-  gs.emit('watchparty:control', { roomId: room.id, action: 'play' });
+  gs.emit('watchparty:control', { roomId: room.id, action: 'play', position: 3 });
   assert.equal(await arrives(hs, 'watchparty:control', 500), false);
 });
 

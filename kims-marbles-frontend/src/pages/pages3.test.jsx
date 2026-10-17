@@ -170,3 +170,69 @@ describe('watch party', () => {
     expect(screen.queryByRole('button', { name: 'Play' })).toBeNull();
   });
 });
+
+describe('watch party sync', () => {
+  const room = { id: 'room-1', host_id: 'u1' };
+  const sock = () => {
+    const l = new Map(); const sent = [];
+    return { sent, on(e, f) { l.set(e, f); }, off(e) { l.delete(e); }, emit(e, p) { sent.push({ e, p }); }, push(e, d) { act(() => l.get(e)?.(d)); } };
+  };
+  // a fake YouTube player behind the iframe: records commands, and can "say" things back
+  async function playerOf(title) {
+    const frame = await screen.findByTitle(title);
+    const got = [];
+    const win = { postMessage: (m) => got.push(typeof m === 'string' ? JSON.parse(m) : m) };
+    Object.defineProperty(frame, 'contentWindow', { value: win });
+    const say = (event, info) => act(() => {
+      const e = new MessageEvent('message', { data: JSON.stringify({ event, info }), origin: 'https://www.youtube-nocookie.com' });
+      Object.defineProperty(e, 'source', { value: win });
+      window.dispatchEvent(e);
+    });
+    return { frame, got, say, funcs: () => got.filter((c) => c.event === 'command').map((c) => `${c.func}${c.args?.length ? `(${Math.round(c.args[0])})` : ''}`) };
+  }
+
+  test('someone arriving mid-video is moved to where the room is, and started', async () => {
+    routes['GET /api/rooms/room-1/watchparty'] = { state: { youtube_id: 'dQw4w9WgXcQ', title: 'Live', playing: true, position: 120 }, queue: [] };
+    wrap(<WatchParty room={room} isHost={false} socket={sock()} panelOpen={false} />);
+    const p = await playerOf('Watch party: Live');
+    p.say('onReady');
+    p.say('infoDelivery', { currentTime: 0, playerState: -1 });
+    expect(p.funcs()).toEqual(['seekTo(120)', 'playVideo']);
+  });
+
+  test('a viewer who fell behind is pulled back in step; one who is close is left alone', async () => {
+    routes['GET /api/rooms/room-1/watchparty'] = { state: { youtube_id: 'dQw4w9WgXcQ', title: 'Live', playing: false, position: 50 }, queue: [] };
+    const s = sock();
+    wrap(<WatchParty room={room} isHost={false} socket={s} panelOpen={false} />);
+    const p = await playerOf('Watch party: Live');
+    p.say('infoDelivery', { currentTime: 50.4, playerState: 2 });
+    expect(p.funcs()).toEqual([]);
+    s.push('watchparty:sync', { roomId: 'room-1', position: 80, playing: true });
+    expect(p.funcs()).toEqual(['seekTo(80)', 'playVideo']);
+  });
+
+  test('a player error is explained instead of a black box', async () => {
+    routes['GET /api/rooms/room-1/watchparty'] = { state: { youtube_id: 'dQw4w9WgXcQ', title: 'Live', playing: true, position: 0 }, queue: [] };
+    wrap(<WatchParty room={room} isHost={false} socket={sock()} panelOpen={false} />);
+    const p = await playerOf('Watch party: Live');
+    p.say('onError', 150);
+    expect(await screen.findByText(/doesn't allow it to be played on other sites/)).toBeTruthy();
+  });
+
+  test('the host\'s buttons carry the host player\'s real position; the host sends heartbeats while playing', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      routes['GET /api/rooms/room-1/watchparty'] = { state: { youtube_id: 'dQw4w9WgXcQ', title: 'Live', playing: true, position: 0 }, queue: [] };
+      const s = sock();
+      wrap(<WatchParty room={room} isHost socket={s} panelOpen={false} />);
+      const p = await playerOf('Watch party: Live');
+      p.say('infoDelivery', { currentTime: 61.7, playerState: 1 });
+      await act(async () => { vi.advanceTimersByTime(5100); });
+      expect(s.sent.find((x) => x.e === 'watchparty:sync')?.p).toEqual({ roomId: 'room-1', position: 61.7 });
+      await user.click(screen.getByTitle('Pause for everyone'));
+      expect(s.sent.find((x) => x.e === 'watchparty:control')?.p).toEqual({ roomId: 'room-1', action: 'pause', position: 61.7 });
+      expect(p.funcs()).toEqual(['pauseVideo'], 'the host is never "corrected"; only the button\'s own command goes out');
+    } finally { vi.useRealTimers(); }
+  });
+});

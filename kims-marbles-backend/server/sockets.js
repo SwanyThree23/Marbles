@@ -122,9 +122,29 @@ function register(io) {
       if (!user || !isYoutubeId(youtubeId) || !(await isRoomHost(user.id, roomId))) return;
       socket.to(roomId).emit('watchparty:load', { roomId, youtubeId, title: typeof title === 'string' ? title.slice(0, 120) : '' });
     })));
-    socket.on('watchparty:control', limited(socket, 'watchparty', RULES.watchparty, guard(async ({ roomId, action }) => {
-      if (!user || !['play', 'pause', 'restart'].includes(action) || !(await isRoomHost(user.id, roomId))) return;
-      socket.to(roomId).emit('watchparty:control', { roomId, action });
+    // The room's playback clock lives in watchparty_state. Every change carries the host's real
+    // player position; heartbeats (watchparty:sync) correct drift. Others get the same values.
+    const position = (p) => (typeof p === 'number' && Number.isFinite(p) && p >= 0 && p <= 86_400 ? p : null);
+    socket.on('watchparty:control', limited(socket, 'watchparty', RULES.watchparty, guard(async ({ roomId, action, position: p }) => {
+      if (!user || !['play', 'pause', 'seek', 'restart'].includes(action) || !(await isRoomHost(user.id, roomId))) return;
+      const pos = action === 'restart' ? 0 : position(p);
+      if (pos === null) return;
+      const r = await db.query(
+        `update watchparty_state set position_seconds = $2, updated_at = now(),
+           playing = case $3 when 'play' then true when 'restart' then true when 'pause' then false else playing end
+         where room_id = $1 returning playing`,
+        [roomId, pos, action]
+      );
+      if (!r.rows[0]) return;
+      socket.to(roomId).emit('watchparty:control', { roomId, action, position: pos, playing: r.rows[0].playing });
+    })));
+    socket.on('watchparty:sync', limited(socket, 'watchparty', RULES.watchparty, guard(async ({ roomId, position: p }) => {
+      const pos = position(p);
+      if (!user || pos === null || !(await isRoomHost(user.id, roomId))) return;
+      const r = await db.query(
+        'update watchparty_state set position_seconds = $2, updated_at = now() where room_id = $1 and playing returning playing', [roomId, pos]
+      );
+      if (r.rows[0]) socket.to(roomId).emit('watchparty:sync', { roomId, position: pos, playing: true });
     })));
 
     // ---------------- battles (gifts arrive over REST and are pushed from there) ----------------

@@ -156,6 +156,7 @@ create table watchparty_state (
   youtube_id text check (youtube_id ~ '^[A-Za-z0-9_-]{11}$'),
   title text not null default '',
   playing boolean not null default false,
+  position_seconds double precision not null default 0, -- as of updated_at; moves on while playing
   updated_at timestamptz not null default now()
 );
 create table watchparty_queue (

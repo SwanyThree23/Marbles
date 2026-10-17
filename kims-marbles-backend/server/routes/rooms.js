@@ -195,10 +195,13 @@ router.get('/:id/watchparty', async (req, res, next) => {
     const room = await loadRoom(req.params.id);
     if (!room) return res.status(404).json({ error: 'Room not found' });
     const [state, queue] = await Promise.all([
-      db.query('select * from watchparty_state where room_id = $1', [room.id]),
+      // position: where the video is right now (the stored clock plus the time since, if playing)
+      db.query(`select *, position_seconds + case when playing then extract(epoch from now() - updated_at) else 0 end as position
+                from watchparty_state where room_id = $1`, [room.id]),
       db.query('select * from watchparty_queue where room_id = $1 order by created_at, id', [room.id]),
     ]);
-    res.json({ state: state.rows[0] || null, queue: queue.rows });
+    const st = state.rows[0] ? { ...state.rows[0], position: Number(state.rows[0].position) } : null;
+    res.json({ state: st, queue: queue.rows });
   } catch (err) { next(err); }
 });
 
@@ -216,8 +219,8 @@ router.post('/:id/watchparty/load', requireAuth, async (req, res, next) => {
     const v = videoInput(req.body || {});
     if (v.error) return res.status(400).json({ error: v.error });
     const r = await db.query(
-      `insert into watchparty_state (room_id, youtube_id, title, playing, updated_at) values ($1, $2, $3, true, now())
-       on conflict (room_id) do update set youtube_id = $2, title = $3, playing = true, updated_at = now() returning *`,
+      `insert into watchparty_state (room_id, youtube_id, title, playing, position_seconds, updated_at) values ($1, $2, $3, true, 0, now())
+       on conflict (room_id) do update set youtube_id = $2, title = $3, playing = true, position_seconds = 0, updated_at = now() returning *`,
       [room.id, v.youtubeId, v.title]
     );
     res.json(r.rows[0]);
