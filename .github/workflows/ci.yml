@@ -82,11 +82,12 @@ jobs:
         run: |
           cd kims-marbles-backend/server
           DATABASE_URL=$TEST_DATABASE_URL JWT_SECRET=ci-only-secret-not-real NODE_ENV=test MEDIASOUP_ANNOUNCED_IP=127.0.0.1 \
-            MEDIASOUP_WORKERS=1 APP_URL=http://localhost:4173 nohup node index.js > /tmp/backend.log 2>&1 &
+            MEDIASOUP_WORKERS=1 APP_URL=http://localhost:4173 SMTP_URL=smtp://127.0.0.1:2525 nohup node index.js > /tmp/backend.log 2>&1 &
           cd ../../kims-marbles-frontend
           nohup node node_modules/vite/bin/vite.js preview --port 4173 --strictPort > /tmp/preview.log 2>&1 &
           for i in $(seq 1 30); do curl -fsS http://localhost:4100/health && curl -fsS -o /dev/null http://localhost:4173 && break; sleep 1; done
       - run: npm run test:browser
         working-directory: kims-marbles-frontend
+        env: { E2E_SMTP: '1' }   # the reset test runs its own SMTP server on :2525
       - if: failure()
         run: tail -100 /tmp/backend.log
