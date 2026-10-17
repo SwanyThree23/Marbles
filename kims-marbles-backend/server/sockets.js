@@ -39,8 +39,8 @@ function register(io) {
     if (!token) return next();
     try {
       const claims = verifyAccessToken(token);
-      const r = await db.query('select id, handle, is_admin from users where id = $1', [claims.sub]);
-      if (!r.rows[0]) return next(new Error('unauthorized'));
+      const r = await db.query('select id, handle, is_admin, banned_at from users where id = $1', [claims.sub]);
+      if (!r.rows[0] || r.rows[0].banned_at) return next(new Error('unauthorized'));
       socket.user = r.rows[0];
       next();
     } catch (_e) {

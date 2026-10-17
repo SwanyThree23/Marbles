@@ -9,9 +9,10 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, SUSPENDED } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimit');
 const { isStr } = require('../validate');
+const mailer = require('../mailer');
 
 const router = express.Router();
 
@@ -81,6 +82,7 @@ router.post('/login', authLimiter, async (req, res, next) => {
     const user = r.rows[0];
     const ok = await bcrypt.compare(password, user ? user.password_hash : DUMMY_HASH);
     if (!user || !ok) return res.status(401).json({ error: 'Wrong email or password' });
+    if (user.banned_at) return res.status(403).json({ error: SUSPENDED, suspended: true });
     res.json(await session(user));
   } catch (err) { next(err); }
 });
@@ -104,7 +106,7 @@ router.post('/refresh', authLimiter, async (req, res, next) => {
         await client.query("update refresh_tokens set revoked_at = now(), revoked_reason = 'rotated' where id = $1", [row.id]);
       }
       const u = await client.query('select * from users where id = $1', [row.user_id]);
-      if (!u.rows[0]) return null;
+      if (!u.rows[0] || u.rows[0].banned_at) return null;
       return { user: u.rows[0], refreshToken: await issueRefreshToken(client, row.user_id, row.family_id) };
     });
     if (!out) return res.status(401).json({ error: 'Your session has ended. Please log in again.' });
@@ -132,6 +134,68 @@ router.post('/logout-all', requireAuth, async (req, res, next) => {
       [req.user.id]
     );
     if (onLogoutAll) onLogoutAll(req.user.id);
+    res.status(204).end();
+  } catch (err) { next(err); }
+});
+
+// ---- forgotten password ----
+const RESET_MINUTES = 30;
+const appUrl = () => (process.env.APP_URL || 'http://localhost:5173').replace(/\/$/, '');
+const escapeHtml = (t) => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+router.get('/reset-available', (_req, res) => res.json({ available: mailer.available() }));
+
+// POST /api/auth/forgot { email } — always the same answer, whether or not the account exists,
+// and the email goes out after the response, so timing does not tell either.
+router.post('/forgot', authLimiter, async (req, res, next) => {
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim() : '';
+  if (!isStr(email, 3, 254) || !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Enter a valid email address' });
+  if (!mailer.available()) return res.status(503).json({ error: 'Password reset by email is not set up yet. Please contact support.' });
+  res.status(202).json({ ok: true, message: 'If an account uses that email, a reset link is on its way.' });
+  try {
+    const u = (await db.query('select id, handle, email, banned_at from users where lower(email) = lower($1)', [email])).rows[0];
+    if (!u || u.banned_at) return;
+    const token = crypto.randomBytes(32).toString('base64url');
+    await db.tx(async (client) => {
+      await client.query('delete from password_resets where user_id = $1', [u.id]); // only the newest link works
+      await client.query(
+        'insert into password_resets (token_hash, user_id, expires_at) values ($1, $2, now() + make_interval(mins => $3))',
+        [sha256(token), u.id, RESET_MINUTES]
+      );
+    });
+    const link = `${appUrl()}/reset/${token}`;
+    await mailer.send({
+      to: u.email,
+      subject: "Reset your Kim's Marbles password",
+      text: `Hi ${u.handle},\n\nSomeone (hopefully you) asked to reset your Kim's Marbles password. Open this link within ${RESET_MINUTES} minutes to choose a new one:\n\n${link}\n\nIf it wasn't you, ignore this email: your password stays the same.\n`,
+      html: `<p>Hi ${escapeHtml(u.handle)},</p><p>Someone (hopefully you) asked to reset your Kim's Marbles password. This link works for ${RESET_MINUTES} minutes:</p><p><a href="${link}">Choose a new password</a></p><p>If it wasn't you, ignore this email: your password stays the same.</p>`,
+    });
+  } catch (err) {
+    console.error('[auth/forgot] could not send the reset email:', err.message);
+    void next;
+  }
+});
+
+// POST /api/auth/reset { token, password } — once per link; ends every existing login.
+router.post('/reset', authLimiter, async (req, res, next) => {
+  const { token, password } = req.body || {};
+  if (!isStr(token, 20, 200)) return res.status(400).json({ error: 'This reset link is not valid or has expired' });
+  if (!isStr(password, 8, 200)) return res.status(400).json({ error: 'Password must be 8-200 characters' });
+  try {
+    const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const userId = await db.tx(async (client) => {
+      const r = await client.query(
+        `update password_resets set used_at = now()
+         where token_hash = $1 and used_at is null and expires_at > now() returning user_id`, [sha256(token)]
+      );
+      if (!r.rows[0]) return null;
+      const id = r.rows[0].user_id;
+      await client.query('update users set password_hash = $2 where id = $1', [id, hash]);
+      await client.query("update refresh_tokens set revoked_at = coalesce(revoked_at, now()), revoked_reason = 'password_reset' where user_id = $1", [id]);
+      return id;
+    });
+    if (!userId) return res.status(400).json({ error: 'This reset link is not valid or has expired' });
+    if (onLogoutAll) onLogoutAll(userId);
     res.status(204).end();
   } catch (err) { next(err); }
 });

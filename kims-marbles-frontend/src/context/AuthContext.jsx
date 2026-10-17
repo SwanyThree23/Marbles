@@ -13,7 +13,9 @@ export function AuthProvider({ children }) {
   const [notice, setNotice] = useState(null);
 
   useEffect(() => onSessionChange(setUser), []);
-  useEffect(() => onSessionEnded(() => setNotice('Your session ended. Please log in again.')), []);
+  useEffect(() => onSessionEnded((why) => setNotice(why === 'suspended'
+    ? 'This account has been suspended. If you think this is a mistake, contact support.'
+    : 'Your session ended. Please log in again.')), []);
 
   // one live connection per signed-in device: cross-device settings and the device list
   useEffect(() => {

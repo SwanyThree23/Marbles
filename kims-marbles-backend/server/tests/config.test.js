@@ -15,6 +15,7 @@ const GOOD = Object.freeze({
   TURN_URLS: 'turn:turn.vibenbones.online:3478?transport=udp',
   TURN_SECRET: 'b'.repeat(64),
   METRICS_TOKEN: 'c'.repeat(32),
+  SMTP_URL: 'smtps://no-reply%40vibenbones.online:pw@smtp.hostinger.com:465',
 });
 const errorsOf = (over) => checkConfig({ ...GOOD, ...over }).errors.join('\n');
 const warningsOf = (over) => checkConfig({ ...GOOD, ...over }).warnings.join('\n');
@@ -95,4 +96,12 @@ test('the real server refuses to boot with a bad production config and lists eve
   });
   assert.equal(r.status, 1);
   for (const what of ['DATABASE_URL', 'JWT_SECRET', 'APP_URL', 'MEDIASOUP_ANNOUNCED_IP', 'live Stripe key']) assert.match(r.stderr, new RegExp(what));
+});
+
+test('email: optional (a warning that password reset is off), but a malformed SMTP_URL is an error that does not echo the password', () => {
+  assert.match(warningsOf({ SMTP_URL: undefined }), /password reset/);
+  const e = errorsOf({ SMTP_URL: 'http://user:hunter2-secret@mail.example.com' });
+  assert.match(e, /SMTP_URL/);
+  assert.ok(!e.includes('hunter2-secret'));
+  assert.equal(errorsOf({ SMTP_URL: 'smtp://127.0.0.1:2525' }), '');
 });

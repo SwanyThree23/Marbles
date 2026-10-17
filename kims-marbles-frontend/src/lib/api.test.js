@@ -155,3 +155,17 @@ describe('API_URL', () => {
     expect(api.resolveApiUrl('https://api.example.com/')).toBe('https://api.example.com');
   });
 });
+
+describe('suspension', () => {
+  test('a suspended account is signed out at once, without a refresh attempt, and listeners are told why', async () => {
+    signIn();
+    const reasons = [];
+    const off = api.onSessionEnded((why) => reasons.push(why));
+    server(() => json(401, { error: 'This account has been suspended', suspended: true }));
+    await expect(api.apiFetch('/api/dashboard')).rejects.toMatchObject({ message: 'This account has been suspended', status: 401 });
+    expect(calls.map((c) => c.path)).toEqual(['/api/dashboard']);
+    expect(api.getCurrentUser()).toBe(null);
+    expect(reasons).toEqual(['suspended']);
+    off();
+  });
+});

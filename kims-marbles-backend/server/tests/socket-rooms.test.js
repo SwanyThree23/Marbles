@@ -322,3 +322,14 @@ test('graceful shutdown: SIGTERM with clients connected exits 0 within seconds',
   assert.equal(await code, 0);
   assert.ok(Date.now() - t0 < 5000, `took ${Date.now() - t0} ms`);
 });
+
+test('a suspended account is cut off from real-time at once and cannot reconnect', async () => {
+  const admin = await register(server, 'Admin');
+  await db.query('update users set is_admin = true where id = $1', [admin.id]);
+  const bob = await register(server, 'Bob');
+  const s = await connect(server, bob.token);
+  const gone = new Promise((r) => s.once('disconnect', r));
+  assert.equal((await rest(server, admin, 'POST', `/api/users/${bob.id}/ban`, { reason: 'x' })).status, 200);
+  await gone;
+  await assert.rejects(connect(server, bob.token), /unauthorized/);
+});

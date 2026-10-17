@@ -100,6 +100,9 @@ HOST_GRACE_MS=120000
 # Stripe TEST keys (sk_test_..., whsec_...). Live keys are refused.
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
+# Email for password resets, e.g. smtps://no-reply%40$DOMAIN:PASSWORD@smtp.hostinger.com:465
+SMTP_URL=
+MAIL_FROM=Kim's Marbles <no-reply@$DOMAIN>
 EOF
   echo "wrote $ENV_FILE with new secrets"
 else
@@ -194,4 +197,6 @@ Still to do by hand:
   2. Stripe (TEST mode): put sk_test_... in STRIPE_SECRET_KEY in $ENV_FILE, add the webhook
      https://$DOMAIN/api/payments/webhook (checkout.session.completed, checkout.session.expired)
      and put its whsec_... in STRIPE_WEBHOOK_SECRET. Then: sudo -u $APP_USER pm2 restart kims-marbles
+  3. Email (for "Forgot password?"): create no-reply@$DOMAIN in Hostinger Emails and put its
+     SMTP address in SMTP_URL (see DEPLOY.md step 7b), then restart the same way.
 EOF

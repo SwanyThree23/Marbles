@@ -126,12 +126,18 @@ export async function apiFetch(path, opts = {}, retried = false) {
   const headers = { ...(opts.body ? { 'Content-Type': 'application/json' } : {}), ...(opts.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await rawFetch(path, { ...opts, headers });
+  if (res.status === 204) return null;
+  const data = await res.json().catch(() => null);
+  if (res.status === 401 && data?.suspended) {
+    // a moderator suspended this account: no refresh can help, sign out here and say why
+    clearSession();
+    endedListeners.forEach((fn) => fn('suspended'));
+    throw new ApiError(data.error, 401, data);
+  }
   if (res.status === 401 && token && !retried) {
     await refreshNow();
     return apiFetch(path, opts, true);
   }
-  if (res.status === 204) return null;
-  const data = await res.json().catch(() => null);
   if (!res.ok) throw new ApiError(data?.error || `Request failed (${res.status})`, res.status, data);
   return data;
 }

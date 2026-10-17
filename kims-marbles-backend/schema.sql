@@ -12,10 +12,23 @@ create table users (
   bio text not null default '' check (length(bio) <= 280),
   is_admin boolean not null default false,
   stripe_account_id text,
+  banned_at timestamptz,
+  banned_reason text not null default '',
+  banned_by uuid references users(id) on delete set null,
   created_at timestamptz not null default now()
 );
 create unique index uq_users_handle on users (lower(handle));
 create unique index uq_users_email on users (lower(email));
+
+-- one row per emailed password-reset link; only the sha-256 of the token is stored
+create table password_resets (
+  token_hash text primary key,
+  user_id uuid not null references users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  used_at timestamptz
+);
+create index idx_password_resets_user on password_resets (user_id);
 
 -- one row per issued refresh token; one login = one family. Only the sha-256 hash is stored.
 create table refresh_tokens (

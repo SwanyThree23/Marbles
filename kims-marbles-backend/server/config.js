@@ -42,6 +42,7 @@ function checkConfig(env) {
   for (const [name, lo, hi] of [['PORT', 1, 65535], ['MEDIASOUP_PORT', 1024, 65535], ['MEDIASOUP_WORKERS', 1, 64], ['PG_POOL_MAX', 1, 200]]) {
     if (env[name] !== undefined && !(int(env[name]) >= lo && int(env[name]) <= hi)) errors.push(`${name} must be a whole number from ${lo} to ${hi}.`);
   }
+  if (env.SMTP_URL && !/^smtps?:\/\/[^\s]+$/.test(env.SMTP_URL)) errors.push('SMTP_URL must start with smtp:// or smtps:// (e.g. smtps://user%40domain:password@smtp.hostinger.com:465).');
   if (env.TURN_URLS && !env.TURN_SECRET) errors.push('TURN_URLS is set but TURN_SECRET is not: nobody would get TURN credentials.');
 
   if (!prod) return { errors, warnings };
@@ -67,6 +68,7 @@ function checkConfig(env) {
   if (!stripeKey) warnings.push('STRIPE_SECRET_KEY is not set: payments are off (tips and checkout answer 503).');
   else if (!env.STRIPE_WEBHOOK_SECRET) warnings.push('STRIPE_WEBHOOK_SECRET is not set: paid orders and tips will never be marked paid.');
   if (!env.TURN_URLS) warnings.push('No TURN relay configured (TURN_URLS): viewers on strict networks will not get video.');
+  if (!env.SMTP_URL) warnings.push('SMTP_URL is not set: password reset by email is off (the app tells people to contact support).');
   if (!env.METRICS_TOKEN) warnings.push('METRICS_TOKEN is not set: /metrics is disabled.');
   return { errors, warnings };
 }

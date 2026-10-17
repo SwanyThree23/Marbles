@@ -118,6 +118,27 @@ sudo -u kims pm2 restart kims-marbles
 A live key (`sk_live_...`) is **refused**: the server won't start with one. That stays
 true until the legal review is done and you deliberately set `STRIPE_ALLOW_LIVE=true`.
 
+## 7b. Email for "Forgot password?"
+
+Without this, the app tells people that email reset isn't set up yet. To turn it on:
+
+1. Hostinger panel → **Emails** → add a mailbox for vibenbones.online, e.g.
+   `no-reply@vibenbones.online`, and set its password.
+2. Add the mailbox to the server settings:
+   ```bash
+   nano /opt/kims-marbles/kims-marbles-backend/server/.env
+   ```
+   Set (the `@` in the user name is written `%40`):
+   ```
+   SMTP_URL=smtps://no-reply%40vibenbones.online:YOUR_MAILBOX_PASSWORD@smtp.hostinger.com:465
+   ```
+3. Restart: `sudo -u kims pm2 restart kims-marbles`
+4. Test it: log out, press **Forgot password?**, enter your own email.
+   The email should arrive within a minute. Check spam the first time.
+
+Using Hostinger's email also sets up the DNS records that keep the mail out of spam
+(SPF and DKIM). The panel shows them under Emails → DNS settings.
+
 ## 8. Try it
 
 Open https://vibenbones.online on your phone and on a computer:

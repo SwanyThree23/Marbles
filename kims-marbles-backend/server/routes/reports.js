@@ -5,6 +5,7 @@ const db = require('../db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { writeLimiter } = require('../middleware/rateLimit');
 const { isUuid, isStr } = require('../validate');
+const { banUser, ownerOf, BanError } = require('../bans');
 
 const router = express.Router();
 const TYPES = ['listing', 'post', 'user', 'panel', 'comment'];
@@ -49,6 +50,26 @@ router.patch('/:id', requireAuth, requireAdmin, async (req, res, next) => {
     if (!r.rows[0]) return res.status(404).json({ error: 'Report not found' });
     res.json(r.rows[0]);
   } catch (err) { next(err); }
+});
+
+// POST /api/reports/:id/ban-author   { reason? }   admins: suspend whoever owns the reported
+// thing (seller, author, host, or the reported person) and close the report as actioned.
+router.post('/:id/ban-author', requireAuth, requireAdmin, async (req, res, next) => {
+  if (!isUuid(req.params.id)) return res.status(404).json({ error: 'Report not found' });
+  const reason = req.body?.reason === undefined ? '' : req.body.reason;
+  if (!isStr(reason, 0, 280)) return res.status(400).json({ error: 'reason must be 280 characters or fewer' });
+  try {
+    const rep = (await db.query('select * from reports where id = $1', [req.params.id])).rows[0];
+    if (!rep) return res.status(404).json({ error: 'Report not found' });
+    const ownerId = await ownerOf(rep.target_type, rep.target_id);
+    if (!ownerId) return res.status(404).json({ error: 'The reported item no longer exists, so its owner cannot be found' });
+    const user = await banUser(req.user.id, ownerId, reason.trim() || `Report: ${rep.reason}`);
+    await db.query("update reports set status = 'actioned', resolved_by = $2, resolved_at = now() where id = $1", [rep.id, req.user.id]);
+    res.json({ user });
+  } catch (err) {
+    if (err instanceof BanError) return res.status(err.status).json({ error: err.message });
+    next(err);
+  }
 });
 
 module.exports = router;

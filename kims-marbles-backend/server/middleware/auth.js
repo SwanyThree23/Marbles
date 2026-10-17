@@ -13,14 +13,17 @@ async function userFromRequest(req) {
   if (!m) return null;
   let claims;
   try { claims = verifyAccessToken(m[1]); } catch (_e) { return null; }
-  const r = await db.query('select id, handle, is_admin from users where id = $1', [claims.sub]);
+  const r = await db.query('select id, handle, is_admin, banned_at from users where id = $1', [claims.sub]);
   return r.rows[0] || null;
 }
+
+const SUSPENDED = 'This account has been suspended';
 
 async function requireAuth(req, res, next) {
   try {
     const user = await userFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Please log in' });
+    if (user.banned_at) return res.status(401).json({ error: SUSPENDED, suspended: true });
     req.user = user;
     next();
   } catch (err) { next(err); }
@@ -29,7 +32,8 @@ async function requireAuth(req, res, next) {
 // Public routes that personalise when a valid token is present (e.g. "liked by me").
 async function optionalAuth(req, _res, next) {
   try {
-    req.user = await userFromRequest(req);
+    const user = await userFromRequest(req);
+    req.user = user && !user.banned_at ? user : null;
     next();
   } catch (err) { next(err); }
 }
@@ -39,4 +43,4 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, optionalAuth, requireAdmin, verifyAccessToken };
+module.exports = { requireAuth, optionalAuth, requireAdmin, verifyAccessToken, SUSPENDED };

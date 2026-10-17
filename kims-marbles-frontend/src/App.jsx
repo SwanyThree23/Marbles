@@ -1,6 +1,7 @@
 // Routes, behind a login gate. Pages other than the marketplace load on demand.
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, lazy, Suspense } from 'react';
+import { apiFetch } from './lib/api';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/Toast';
 import Layout from './components/Layout';
@@ -17,6 +18,7 @@ const JoinInvite = lazy(() => import('./pages/JoinInvite'));
 const LiveByRoom = lazy(() => import('./pages/LiveByRoom'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ModerationQueue = lazy(() => import('./pages/ModerationQueue'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 export default function App() {
   return (
@@ -32,10 +34,21 @@ export default function App() {
 
 export function Gate() {
   const { isAuthed } = useAuth();
-  if (!isAuthed) return <AuthScreen />;
+  const loading = <p className="muted" style={{ padding: 24 }}>Loading…</p>;
+  if (!isAuthed) {
+    return (
+      <Suspense fallback={loading}>
+        <Routes>
+          <Route path="/reset/:token" element={<ResetPassword />} />
+          <Route path="*" element={<AuthScreen />} />
+        </Routes>
+      </Suspense>
+    );
+  }
   return (
-    <Suspense fallback={<p className="muted" style={{ padding: 24 }}>Loading…</p>}>
+    <Suspense fallback={loading}>
       <Routes>
+        <Route path="/reset/:token" element={<ResetPassword />} />
         <Route element={<Layout />}>
           <Route path="/" element={<Navigate to="/market" replace />} />
           <Route path="/market" element={<Marketplace />} />
@@ -65,6 +78,30 @@ function AuthScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(null);
+
+  async function forgot(e) {
+    e.preventDefault();
+    setError(null); setBusy(true);
+    try {
+      const r = await apiFetch('/api/auth/forgot', { method: 'POST', body: JSON.stringify({ email: email.trim() }) });
+      setSent(r.message);
+    } catch (err) { setError(err.message); } finally { setBusy(false); }
+  }
+
+  if (mode === 'forgot') {
+    return (
+      <form className="login-form" onSubmit={forgot}>
+        <h1>Forgot password</h1>
+        <p className="muted">Enter your account's email and we'll send you a link to choose a new password.</p>
+        <input placeholder="Email" aria-label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        {sent && <p role="status">{sent}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
+        <button type="submit" className="primary-btn" disabled={busy || !email.trim()}>Send reset link</button>
+        <button type="button" className="link-btn" onClick={() => { setMode('login'); setSent(null); setError(null); }}>Back to log in</button>
+      </form>
+    );
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -93,6 +130,7 @@ function AuthScreen() {
       <button type="button" className="link-btn" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null); }}>
         {mode === 'login' ? 'Need an account? Register' : 'Have an account? Log in'}
       </button>
+      {mode === 'login' && <button type="button" className="link-btn" onClick={() => { setMode('forgot'); setError(null); }}>Forgot password?</button>}
     </form>
   );
 }
