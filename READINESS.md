@@ -12,12 +12,12 @@ confirm a test fails.
 
 | Area | How | Result |
 |---|---|---|
-| Backend: auth, marketplace, offers, bids, collection, feed, DMs, battles, rooms, invites, moderation, payments, dashboard, games, templates, notifications, reports, rate limits | `node --test` against real Postgres and the real server process | **158/158** |
-| Real-time: chat order, moderation, flood control, host commands, devices, settings sync, SFU signalling, one publishing device per person | real Socket.io clients and real mediasoup (part of the 158) | pass |
-| Frontend: every page, the live room, the media client, theme, the CSP hash | vitest + Testing Library | **100/100** |
-| Real browsers, real media | Chromium with a fake camera, the built app, the real backend and SFU | **31/31** (TURN included) |
+| Backend: auth, marketplace, offers, bids, collection, feed, DMs, battles, rooms, invites, moderation, payments, dashboard, games, templates, notifications, reports, rate limits | `node --test` against real Postgres and the real server process | **159/159** |
+| Real-time: chat order, moderation, flood control, host commands, devices, settings sync, SFU signalling, one publishing device per person | real Socket.io clients and real mediasoup (part of the 159) | pass |
+| Frontend: every page, the live room, the media client, theme, the CSP hash, reporting, the moderators' queue, the watch party | vitest + Testing Library | **114/114** |
+| Real browsers, real media | Chromium with a fake camera, the built app, the real backend and SFU | **33/33** (TURN included) |
 | Same suite through the **production nginx config** over HTTPS/WSS, with a real **coturn** relay | the config from `deploy/nginx/`, self-signed certificate | all pass ¹ |
-| Mutation checks | broke the code on purpose, per stage | 63 of 64 caught; the 1 miss is an equivalent mutant (COMMIT on a failed Postgres transaction is a rollback) |
+| Mutation checks | broke the code on purpose, per stage | 72 of 73 caught; the 1 miss is an equivalent mutant (COMMIT on a failed Postgres transaction is a rollback) |
 | Many users at once | `scripts/load-test.js`, one 4-core machine running both server and load | **1,610 simultaneous connections**: 802,907 chat deliveries with **0 lost**; latency p50 18 ms, p95 38 ms, p99 50 ms; 1,366 HTTP req/s with 0 errors (p95 47 ms); 302 MB memory |
 | Real-time sync across devices | browser tests: theme and device list follow the person, a second device becomes a remote control with takeover, the server restarts mid-stream and both sides reconnect by themselves | pass |
 | Deploy pieces | nginx 1.24 `nginx -t`, shellcheck, the migration as a non-superuser, backup → restore, smoke test through nginx | pass |
