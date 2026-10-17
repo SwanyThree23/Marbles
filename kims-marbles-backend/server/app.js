@@ -2,11 +2,13 @@
 // The test suite imports this; index.js boots it into the real server.
 const express = require('express');
 const cors = require('cors');
-const db = require('./db');
+const ops = require('./ops');
 
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1); // behind nginx: rate limits key on the real client IP
+app.use(ops.securityHeaders);
+app.use(ops.countRequests);
 
 const origins = (process.env.CORS_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
 app.use(cors({ origin: origins.length ? origins : process.env.NODE_ENV !== 'production' }));
@@ -14,14 +16,8 @@ app.use(cors({ origin: origins.length ? origins : process.env.NODE_ENV !== 'prod
 app.post('/api/payments/webhook', express.raw({ type: 'application/json', limit: '1mb' }), require('./routes/payments').webhook);
 app.use(express.json({ limit: '100kb' }));
 
-app.get('/health', async (_req, res) => {
-  try {
-    await db.query('select 1');
-    res.json({ ok: true, service: 'kims-marbles-server' });
-  } catch (_err) {
-    res.status(503).json({ ok: false, service: 'kims-marbles-server', error: 'database unreachable' });
-  }
-});
+app.get('/health', ops.health);
+app.get('/metrics', ops.metrics);
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/listings', require('./routes/listings'));

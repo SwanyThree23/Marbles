@@ -7,7 +7,8 @@
 // controller (host controls + chat) and cannot publish unless it explicitly takes over,
 // which closes the first device's media. This stops a host with phone + laptop open from
 // sending two cameras.
-const { guard, limited, isUuid, roomIsOpen } = require('../socketGuard');
+const { guard, limited, isUuid, roomIsOpen, getRoomModeration } = require('../socketGuard');
+const presence = require('../hostPresence');
 const msRooms = require('./rooms');
 
 const MAX_TRANSPORTS = 4;
@@ -49,6 +50,8 @@ function register(io, socket) {
     if (!room.peers.has(socket.id)) msRooms.addPeer(room, socket);
     socket.data.msRoomId = roomId;
     socket.join(roomId);
+    const mod = await getRoomModeration(roomId);
+    if (mod && socket.user && socket.user.id === mod.hostId) presence.hostJoined(roomId, socket.id);
     const existingProducers = [];
     for (const other of room.peers.values()) {
       if (other.socketId === socket.id) continue;

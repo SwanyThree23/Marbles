@@ -1,0 +1,92 @@
+# Kim's Marbles CI: backend (real Postgres, real server, real SFU), frontend unit tests and
+# build, the deploy configs (shellcheck + nginx -t), and the real-browser suite (real
+# Chromium with a fake camera, real media through the SFU).
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_HOST_AUTH_METHOD: trust }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://postgres@127.0.0.1:5432/km_test
+    defaults: { run: { working-directory: kims-marbles-backend/server } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: kims-marbles-backend/server/package-lock.json }
+      - run: npm ci
+      - run: npm run test:db
+      - run: npm test
+
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults: { run: { working-directory: kims-marbles-frontend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: kims-marbles-frontend/package-lock.json }
+      - run: npm ci
+      - run: npx vitest run
+      - run: VITE_API_URL= npm run build
+      - name: the production bundle never calls localhost
+        run: "! grep -l 'localhost:4100' dist/assets/*.js"
+
+  deploy-configs:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -q && sudo apt-get install -y -q shellcheck nginx
+      - run: shellcheck -S warning kims-marbles-backend/deploy/*.sh
+      - name: nginx -t on the production config (with a throwaway certificate)
+        run: |
+          L=/etc/letsencrypt/live/vibenbones.online
+          sudo mkdir -p $L
+          sudo openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=vibenbones.online -keyout $L/privkey.pem -out $L/fullchain.pem
+          sudo cp kims-marbles-backend/deploy/nginx/kims-marbles-app.conf /etc/nginx/snippets/
+          sudo cp kims-marbles-backend/deploy/nginx/kims-marbles.conf /etc/nginx/sites-enabled/kims-marbles
+          sudo rm -f /etc/nginx/sites-enabled/default
+          sudo nginx -t
+
+  browser:
+    needs: [backend, frontend]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_HOST_AUTH_METHOD: trust }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://postgres@127.0.0.1:5432/km_e2e_test
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci && npm run test:db
+        working-directory: kims-marbles-backend/server
+      - run: npm ci && VITE_API_URL=http://localhost:4100 npm run build
+        working-directory: kims-marbles-frontend
+      - name: start the backend and the built app
+        run: |
+          cd kims-marbles-backend/server
+          DATABASE_URL=$TEST_DATABASE_URL JWT_SECRET=ci-only-secret-not-real NODE_ENV=test MEDIASOUP_ANNOUNCED_IP=127.0.0.1 \
+            MEDIASOUP_WORKERS=1 APP_URL=http://localhost:4173 nohup node index.js > /tmp/backend.log 2>&1 &
+          cd ../../kims-marbles-frontend
+          nohup node node_modules/vite/bin/vite.js preview --port 4173 --strictPort > /tmp/preview.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://localhost:4100/health && curl -fsS -o /dev/null http://localhost:4173 && break; sleep 1; done
+      - run: npm run test:browser
+        working-directory: kims-marbles-frontend
+      - if: failure()
+        run: tail -100 /tmp/backend.log

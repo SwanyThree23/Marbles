@@ -83,7 +83,7 @@ test('invite link: one person gets on stage with it; a second person is refused'
     const hostPage = await openPage(host); await goLive(hostPage);
     await hostPage.getByTitle('Invite someone on stage').click();
     const url = (await hostPage.locator('.mono', { hasText: '/join/' }).innerText()).trim();
-    assert.match(url, /^http:\/\/localhost:4173\/join\/[\w-]{20,}$/);
+    assert.match(url, new RegExp(`^${APP}/join/[\\w-]{20,}$`));
     const aPage = await openPage(a); await aPage.goto(url); await waitLive(aPage);
     await until(() => playing(hostPage, a.handle), { what: 'invitee on stage' });
     const bPage = await openPage(b); await bPage.goto(url);

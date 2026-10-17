@@ -11,7 +11,8 @@
     "start": "node index.js",
     "dev": "node --watch index.js",
     "test": "node --test --test-concurrency=1 --test-timeout=60000 tests/*.test.js",
-    "test:db": "node scripts/fresh-test-db.js"
+    "test:db": "node scripts/fresh-test-db.js",
+    "migrate": "node scripts/migrate.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -25,7 +26,7 @@
     "stripe": "^17.5.0"
   },
   "devDependencies": {
-    "socket.io-client": "^4.8.1",
+    "socket.io-client": "^4.8.4",
     "supertest": "^7.0.0"
   }
 }

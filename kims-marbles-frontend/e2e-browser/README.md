@@ -56,3 +56,20 @@ E2E_TURN=1 TURN_LOG=/tmp/turn.log TURN_SECRET=turn-test-secret \
   npm run test:browser
 ```
 `turnserver.test.conf` allows loopback relaying — local testing only.
+
+## Through the production nginx config (HTTPS + WSS)
+
+The same suite can run through `kims-marbles-backend/deploy/nginx/` exactly as deployed, on
+a throwaway machine: a self-signed certificate at `/etc/letsencrypt/live/vibenbones.online/`,
+`127.0.0.1 vibenbones.online` in `/etc/hosts`, the build (`VITE_API_URL=`) in
+`/var/www/kims-marbles`, the backend with `APP_URL=https://vibenbones.online`, then:
+```bash
+APP_URL=https://vibenbones.online API_URL=https://vibenbones.online E2E_INSECURE=1 E2E_HOST_MAP=vibenbones.online \
+  NODE_TLS_REJECT_UNAUTHORIZED=0 npm run test:browser
+```
+`E2E_INSECURE=1` only makes the test browser accept the self-signed certificate, and
+`E2E_HOST_MAP` points the domain at this machine inside the test browser (otherwise it
+would load the real public site).
+
+`E2E_RESTART_CMD=<script>` enables the "server restart mid-stream" test: the script must
+restart the backend (by PID) without touching the database.

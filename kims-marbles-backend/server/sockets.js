@@ -11,6 +11,7 @@ const {
 } = require('./socketGuard');
 const roomState = require('./roomState');
 const signaling = require('./mediasoup/signaling');
+const presence = require('./hostPresence');
 
 const RULES = {
   chat: { burst: 5, perSec: 1 },
@@ -63,11 +64,16 @@ function register(io) {
       const mod = await getRoomModeration(roomId);
       if (!mod) return;
       socket.join(roomId);
+      if (user && user.id === mod.hostId) presence.hostJoined(roomId, socket.id);
       socket.emit('room:state', roomState.snapshot(roomState.get(roomId, mod.hostId)));
       if (user) socket.to(roomId).emit('room:guest-joined', { userId: user.id, handle: user.handle });
     })));
 
-    socket.on('room:leave', guard(({ roomId }) => { if (typeof roomId === 'string') socket.leave(roomId); }));
+    socket.on('room:leave', guard(({ roomId }) => {
+      if (typeof roomId !== 'string') return;
+      socket.leave(roomId);
+      presence.hostLeft(roomId, socket.id);
+    }));
 
     socket.on('room:chat', limited(socket, 'chat', RULES.chat, guard(async ({ roomId, text }) => {
       if (!user || !inRoom(socket, roomId) || typeof text !== 'string') return;
@@ -147,6 +153,7 @@ function register(io) {
 
     socket.on('disconnect', () => {
       if (socket.data.msLeave) socket.data.msLeave();
+      presence.socketGone(socket.id);
       if (user && devices.get(user.id)?.delete(socket.id)) {
         if (!devices.get(user.id).size) devices.delete(user.id);
         io.to(`user:${user.id}`).emit('device:list', deviceList(user.id));

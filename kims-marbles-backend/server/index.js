@@ -3,13 +3,16 @@
 const http = require('http');
 const { Server } = require('socket.io');
 
-if (!process.env.JWT_SECRET) {
-  console.error('[config] JWT_SECRET is required (openssl rand -hex 32)');
-  process.exit(1);
-}
-if (process.env.NODE_ENV === 'production' && !process.env.MEDIASOUP_ANNOUNCED_IP) {
-  console.error('[config] MEDIASOUP_ANNOUNCED_IP is required in production (the server\'s public IP); without it nobody receives video');
-  process.exit(1);
+const { checkConfig } = require('./config');
+
+{
+  const { errors, warnings } = checkConfig(process.env);
+  for (const w of warnings) console.warn(`[config] warning: ${w}`);
+  if (errors.length) {
+    for (const e of errors) console.error(`[config] ${e}`);
+    console.error(`[config] refusing to start: fix the ${errors.length} problem(s) above in the server's .env`);
+    process.exit(1);
+  }
 }
 
 const app = require('./app');
@@ -19,6 +22,7 @@ const { setEmitter } = require('./notify');
 const auth = require('./routes/auth');
 const sockets = require('./sockets');
 const workers = require('./mediasoup/worker');
+const signaling = require('./mediasoup/signaling');
 
 const PORT = parseInt(process.env.PORT || '4100', 10);
 const MS_PORT = parseInt(process.env.MEDIASOUP_PORT || '44444', 10);
@@ -32,16 +36,6 @@ async function main() {
     maxHttpBufferSize: 256 * 1024,
   });
 
-  if (process.env.REDIS_URL) {
-    const { createAdapter } = require('@socket.io/redis-adapter');
-    const { createClient } = require('redis');
-    const pub = createClient({ url: process.env.REDIS_URL });
-    const sub = pub.duplicate();
-    await Promise.all([pub.connect(), sub.connect()]);
-    io.adapter(createAdapter(pub, sub));
-    console.log('[socket.io] Redis adapter connected — multi-instance sync enabled');
-  }
-
   realtime.setIo(io);
   setEmitter((userId, event, payload) => realtime.toUser(userId, event, payload));
   auth.setOnLogoutAll((userId) => realtime.disconnectUser(userId));
@@ -49,6 +43,7 @@ async function main() {
     require('./socketGuard').forgetRoom(roomId);
     require('./roomState').forget(roomId);
     require('./mediasoup/rooms').closeRoom(roomId);
+    require('./hostPresence').forget(roomId);
   });
 
   try {
@@ -60,6 +55,12 @@ async function main() {
   console.log(`[mediasoup] ${MS_WORKERS} worker(s) ready — WebRTC on ports ${MS_PORT}-${MS_PORT + MS_WORKERS - 1} (udp+tcp), announced as ${process.env.MEDIASOUP_ANNOUNCED_IP || '(local address)'}`);
 
   sockets.register(io);
+  require('./ops').setProviders({
+    sfu: () => ({ ...workers.stats(), ...signaling.stats() }),
+    sockets: () => io.engine.clientsCount,
+    presence: () => require('./hostPresence').stats(),
+  });
+  require('./hostPresence').start({ graceMs: parseInt(process.env.HOST_GRACE_MS || '120000', 10) });
 
   let stopping = false;
   async function shutdown(signal) {

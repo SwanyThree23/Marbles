@@ -18,6 +18,13 @@ export async function startBrowser() {
       // 3 fake cameras: Chromium's fake_device_1 does not encode, see camera-switch/e2e/harness.html
       '--use-fake-device-for-media-stream=device-count=3',
       '--autoplay-policy=no-user-gesture-required',
+      // E2E_HOST_MAP=vibenbones.online: test the real nginx config on THIS machine. Without the
+      // mapping, and with an outbound proxy in the environment, Chromium would load the public
+      // site instead. (No proxy: web fonts don't load in this mode, which no test depends on.)
+      ...(process.env.E2E_HOST_MAP ? [
+        `--host-resolver-rules=MAP ${process.env.E2E_HOST_MAP} 127.0.0.1, MAP *.${process.env.E2E_HOST_MAP} 127.0.0.1`,
+        '--no-proxy-server',
+      ] : []),
     ],
   });
 }
@@ -55,7 +62,8 @@ const RECORD_PCS = () => {
 };
 
 async function newContext({ colorScheme = 'light', session = null, relay = false } = {}) {
-  const ctx = await browser.newContext({ colorScheme, permissions: ['camera', 'microphone'], viewport: { width: 1280, height: 800 } });
+  // E2E_INSECURE=1: testing the real nginx config locally with a self-signed certificate
+  const ctx = await browser.newContext({ colorScheme, permissions: ['camera', 'microphone'], viewport: { width: 1280, height: 800 }, ignoreHTTPSErrors: !!process.env.E2E_INSECURE });
   contexts.add(ctx);
   await ctx.addInitScript(RECORD_PCS);
   if (session || relay) {
