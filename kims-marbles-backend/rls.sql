@@ -7,6 +7,7 @@
 --
 -- Tables with RLS on and NO policy are server-only: nobody but the owner role can touch them.
 
+alter table email_verifications enable row level security;   -- server-only (confirmation token hashes)
 alter table password_resets enable row level security;        -- server-only (reset token hashes)
 alter table users enable row level security;                  -- server-only (holds emails and password hashes)
 alter table refresh_tokens enable row level security;         -- server-only

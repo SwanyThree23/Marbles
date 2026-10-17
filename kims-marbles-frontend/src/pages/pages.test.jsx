@@ -121,7 +121,23 @@ describe('Me', () => {
     routes['GET /api/moderation'] = { enabled: false, words: [] };
     routes['GET /api/payments/status'] = { onboarded: false, chargesEnabled: false };
     routes['GET /api/achievements'] = [];
+    routes['GET /api/auth/me'] = { id: 'u1', handle: 'Joyce', email: 'joyce@example.com', email_verified: true };
     devices.list = [];
+  });
+
+  test('email: confirmed shows a tick; unconfirmed offers to send the link again', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderAt('/me', <Me />);
+    const card = (await screen.findByText('joyce@example.com')).closest('.settings-card');
+    expect(within(card).getByText('✓ Confirmed')).toBeTruthy();
+    expect(within(card).queryByRole('button', { name: 'Send confirmation email' })).toBeNull();
+    unmount();
+    routes['GET /api/auth/me'] = { id: 'u1', handle: 'Joyce', email: 'joyce@example.com', email_verified: false };
+    routes['POST /api/auth/verify/resend'] = { ok: true, message: 'A new confirmation link is on its way to joyce@example.com.' };
+    renderAt('/me', <Me />);
+    await user.click(await screen.findByRole('button', { name: 'Send confirmation email' }));
+    expect(await screen.findByText(/A new confirmation link is on its way/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Send confirmation email' }).disabled).toBe(true);
   });
 
   test('appearance: the pressed button follows the choice; choosing Dark applies it', async () => {

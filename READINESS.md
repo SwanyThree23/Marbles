@@ -12,12 +12,12 @@ confirm a test fails.
 
 | Area | How | Result |
 |---|---|---|
-| Backend: auth, marketplace, offers, bids, collection, feed, DMs, battles, rooms, invites, moderation, payments, dashboard, games, templates, notifications, reports, rate limits | `node --test` against real Postgres and the real server process | **181/181** |
-| Real-time: chat order, moderation, flood control, host commands, devices, settings sync, SFU signalling, one publishing device per person | real Socket.io clients and real mediasoup (part of the 181) | pass |
-| Frontend: every page, the live room, the media client, theme, the CSP hash, reporting, the moderators' queue, suspensions, password reset, watch-party sync | vitest + Testing Library | **132/132** |
-| Real browsers, real media | Chromium with a fake camera, the built app, the real backend and SFU | **36/36** (TURN and the real-SMTP reset test included) |
+| Backend: auth, marketplace, offers, bids, collection, feed, DMs, battles, rooms, invites, moderation, payments, dashboard, games, templates, notifications, reports, rate limits | `node --test` against real Postgres and the real server process | **188/188** |
+| Real-time: chat order, moderation, flood control, host commands, devices, settings sync, SFU signalling, one publishing device per person | real Socket.io clients and real mediasoup (part of the 188) | pass |
+| Frontend: every page, the live room, the media client, theme, the CSP hash, reporting, the moderators' queue, suspensions, password reset, email confirmation, comment moderation, watch-party sync | vitest + Testing Library | **137/137** |
+| Real browsers, real media | Chromium with a fake camera, the built app, the real backend and SFU | **36/36** (TURN and the real-SMTP confirm + reset test included) |
 | Same suite through the **production nginx config** over HTTPS/WSS, with a real **coturn** relay | the config from `deploy/nginx/`, self-signed certificate | all pass ¹ |
-| Mutation checks | broke the code on purpose, per stage | 86 of 87 caught; the 1 miss is an equivalent mutant (COMMIT on a failed Postgres transaction is a rollback). A missing watch-party heartbeat was first missed, then caught by a test added for a slow host player |
+| Mutation checks | broke the code on purpose, per stage | 89 of 90 caught; the 1 miss is an equivalent mutant (COMMIT on a failed Postgres transaction is a rollback). A missing watch-party heartbeat was first missed, then caught by a test added for a slow host player |
 | Many users at once | `scripts/load-test.js`, one 4-core machine running both server and load | **1,610 simultaneous connections**: 802,907 chat deliveries with **0 lost**; latency p50 18 ms, p95 38 ms, p99 50 ms; 1,366 HTTP req/s with 0 errors (p95 47 ms); 302 MB memory |
 | Real-time sync across devices | browser tests: theme and device list follow the person, a second device becomes a remote control with takeover, the server restarts mid-stream and both sides reconnect by themselves | pass |
 | Deploy pieces | nginx 1.24 `nginx -t`, shellcheck, the migration as a non-superuser, backup → restore, smoke test through nginx | pass |
@@ -65,10 +65,9 @@ confirm a test fails.
 - **Watch party playback on real YouTube.** The embed handshake was checked against the real
   YouTube player. Playing a video could not be checked from the build machine, because YouTube
   refuses playback to cloud servers. Try one video on the live site.
-- **Moderation.** Admins remove listings and posts, and suspend or unsuspend people. Comments
-  can be reported, but there is no button to remove a single comment yet.
-- **Email.** Password reset works once `SMTP_URL` is set (DEPLOY.md step 7b). There is no
-  email address verification at sign-up.
+- **Email needs `SMTP_URL`** (DEPLOY.md step 7b). Until it is set, nobody gets confirmation
+  or reset emails, and the app says so. Password-reset emails only go to confirmed addresses;
+  people who signed up before email was set up confirm from their Me page.
 - **Before real money:** the legal review and Stripe live activation. Live keys are refused
   until then.
 

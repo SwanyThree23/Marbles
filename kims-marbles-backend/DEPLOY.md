@@ -136,6 +136,11 @@ Without this, the app tells people that email reset isn't set up yet. To turn it
 4. Test it: log out, press **Forgot password?**, enter your own email.
    The email should arrive within a minute. Check spam the first time.
 
+New accounts get a "confirm your email" message, and reset emails only go to confirmed
+addresses. That stops a typo at sign-up from handing the account to whoever owns the
+mistyped address. Anyone who signed up before email was set up can press **Send
+confirmation email** on their Me page.
+
 Using Hostinger's email also sets up the DNS records that keep the mail out of spam
 (SPF and DKIM). The panel shows them under Emails → DNS settings.
 

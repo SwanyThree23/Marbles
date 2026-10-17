@@ -19,6 +19,7 @@ const LiveByRoom = lazy(() => import('./pages/LiveByRoom'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ModerationQueue = lazy(() => import('./pages/ModerationQueue'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export function Gate() {
       <Suspense fallback={loading}>
         <Routes>
           <Route path="/reset/:token" element={<ResetPassword />} />
+          <Route path="/verify/:token" element={<VerifyEmail />} />
           <Route path="*" element={<AuthScreen />} />
         </Routes>
       </Suspense>
@@ -49,6 +51,7 @@ export function Gate() {
     <Suspense fallback={loading}>
       <Routes>
         <Route path="/reset/:token" element={<ResetPassword />} />
+        <Route path="/verify/:token" element={<VerifyEmail />} />
         <Route element={<Layout />}>
           <Route path="/" element={<Navigate to="/market" replace />} />
           <Route path="/market" element={<Marketplace />} />

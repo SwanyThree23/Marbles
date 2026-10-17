@@ -25,7 +25,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', BCRYPT_ROUNDS);
 
 const sha256 = (t) => crypto.createHash('sha256').update(t).digest('hex');
-const publicUser = (u) => ({ id: u.id, handle: u.handle, avatar_icon: u.avatar_icon, bio: u.bio, is_admin: u.is_admin, created_at: u.created_at });
+const publicUser = (u) => ({ id: u.id, handle: u.handle, avatar_icon: u.avatar_icon, bio: u.bio, is_admin: u.is_admin, email_verified: !!u.email_verified_at, created_at: u.created_at });
 
 function accessToken(user) {
   return jwt.sign({ sub: user.id, handle: user.handle }, process.env.JWT_SECRET, {
@@ -65,6 +65,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
       [handle, email.trim(), hash]
     );
     res.status(201).json(await session(r.rows[0]));
+    if (mailer.available()) sendConfirmation(r.rows[0]).catch((e) => console.error('[auth/register] confirmation email failed:', e.message));
   } catch (err) {
     if (err.code === '23505') {
       const what = /handle/.test(err.constraint || '') ? 'That handle is taken' : 'An account with that email already exists';
@@ -138,10 +139,60 @@ router.post('/logout-all', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ---- forgotten password ----
-const RESET_MINUTES = 30;
+// ---- confirming the email address ----
 const appUrl = () => (process.env.APP_URL || 'http://localhost:5173').replace(/\/$/, '');
 const escapeHtml = (t) => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const CONFIRM_DAYS = 7;
+async function sendConfirmation(u) {
+  const token = crypto.randomBytes(32).toString('base64url');
+  await db.tx(async (client) => {
+    await client.query('delete from email_verifications where user_id = $1', [u.id]); // only the newest link works
+    await client.query(
+      'insert into email_verifications (token_hash, user_id, expires_at) values ($1, $2, now() + make_interval(days => $3))',
+      [sha256(token), u.id, CONFIRM_DAYS]
+    );
+  });
+  const link = `${appUrl()}/verify/${token}`;
+  await mailer.send({
+    to: u.email,
+    subject: "Confirm your email for Kim's Marbles",
+    text: `Hi ${u.handle},\n\nWelcome to Kim's Marbles! Please confirm this is your email address:\n\n${link}\n\nConfirming lets you reset your password by email if you ever forget it. If you didn't sign up, ignore this email.\n`,
+    html: `<p>Hi ${escapeHtml(u.handle)},</p><p>Welcome to Kim's Marbles! Please confirm this is your email address:</p><p><a href="${link}">Confirm my email</a></p><p>Confirming lets you reset your password by email if you ever forget it. If you didn't sign up, ignore this email.</p>`,
+  });
+}
+
+// POST /api/auth/verify { token } — from the emailed link; works logged in or out, once
+router.post('/verify', authLimiter, async (req, res, next) => {
+  const { token } = req.body || {};
+  if (!isStr(token, 20, 200)) return res.status(400).json({ error: 'This confirmation link is not valid or has expired' });
+  try {
+    const ok = await db.tx(async (client) => {
+      const r = await client.query(
+        'update email_verifications set used_at = now() where token_hash = $1 and used_at is null and expires_at > now() returning user_id',
+        [sha256(token)]
+      );
+      if (!r.rows[0]) return false;
+      await client.query('update users set email_verified_at = coalesce(email_verified_at, now()) where id = $1', [r.rows[0].user_id]);
+      return true;
+    });
+    if (!ok) return res.status(400).json({ error: 'This confirmation link is not valid or has expired' });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// POST /api/auth/verify/resend — a fresh link to my address
+router.post('/verify/resend', requireAuth, authLimiter, async (req, res, next) => {
+  try {
+    const u = (await db.query('select id, handle, email, email_verified_at from users where id = $1', [req.user.id])).rows[0];
+    if (u.email_verified_at) return res.status(409).json({ error: 'Your email is already confirmed' });
+    if (!mailer.available()) return res.status(503).json({ error: 'Email is not set up yet. Please contact support.' });
+    await sendConfirmation(u);
+    res.status(202).json({ ok: true, message: `A new confirmation link is on its way to ${u.email}.` });
+  } catch (err) { next(err); }
+});
+
+// ---- forgotten password ----
+const RESET_MINUTES = 30;
 
 router.get('/reset-available', (_req, res) => res.json({ available: mailer.available() }));
 
@@ -151,10 +202,11 @@ router.post('/forgot', authLimiter, async (req, res, next) => {
   const email = typeof req.body?.email === 'string' ? req.body.email.trim() : '';
   if (!isStr(email, 3, 254) || !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Enter a valid email address' });
   if (!mailer.available()) return res.status(503).json({ error: 'Password reset by email is not set up yet. Please contact support.' });
-  res.status(202).json({ ok: true, message: 'If an account uses that email, a reset link is on its way.' });
+  res.status(202).json({ ok: true, message: 'If an account with a confirmed email uses that address, a reset link is on its way.' });
   try {
-    const u = (await db.query('select id, handle, email, banned_at from users where lower(email) = lower($1)', [email])).rows[0];
-    if (!u || u.banned_at) return;
+    const u = (await db.query('select id, handle, email, banned_at, email_verified_at from users where lower(email) = lower($1)', [email])).rows[0];
+    // only to a confirmed address: a typo at sign-up must not hand the account to that address's owner
+    if (!u || u.banned_at || !u.email_verified_at) return;
     const token = crypto.randomBytes(32).toString('base64url');
     await db.tx(async (client) => {
       await client.query('delete from password_resets where user_id = $1', [u.id]); // only the newest link works

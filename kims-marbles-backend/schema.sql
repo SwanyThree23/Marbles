@@ -15,6 +15,7 @@ create table users (
   banned_at timestamptz,
   banned_reason text not null default '',
   banned_by uuid references users(id) on delete set null,
+  email_verified_at timestamptz,
   created_at timestamptz not null default now()
 );
 create unique index uq_users_handle on users (lower(handle));
@@ -29,6 +30,16 @@ create table password_resets (
   used_at timestamptz
 );
 create index idx_password_resets_user on password_resets (user_id);
+
+-- one row per emailed "confirm your email" link; only the sha-256 of the token is stored
+create table email_verifications (
+  token_hash text primary key,
+  user_id uuid not null references users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  used_at timestamptz
+);
+create index idx_email_verifications_user on email_verifications (user_id);
 
 -- one row per issued refresh token; one login = one family. Only the sha-256 hash is stored.
 create table refresh_tokens (

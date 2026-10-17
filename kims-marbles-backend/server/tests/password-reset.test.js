@@ -32,12 +32,25 @@ async function nextMail(n = 1) {
 }
 // quoted-printable can wrap long lines with "=\r\n"; undo that before looking for the link
 const linkIn = (mail) => mail.raw.replace(/=\r?\n/g, '').match(/https:\/\/vibenbones\.online\/reset\/([\w-]{40,})/)?.[1];
+const confirmLinkIn = (mail) => mail.raw.replace(/=\r?\n/g, '').match(/https:\/\/vibenbones\.online\/verify\/([\w-]{40,})/)?.[1];
+// sign up, wait for the sign-up confirmation email to land, then empty the inbox
+const signedUp = async (handle) => {
+  const u = await user(handle);
+  for (let i = 0; i < 100 && !inbox.some((m) => m.to.includes(`${handle.toLowerCase()}@x.com`)); i++) await sleep(20);
+  inbox.length = 0;
+  return u;
+};
+const verified = async (handle) => {
+  const u = await signedUp(handle);
+  await db.query('update users set email_verified_at = now() where id = $1', [u.id]);
+  return u;
+};
 const forgot = (email) => api().post('/api/auth/forgot').send({ email });
 const reset = (token, password) => api().post('/api/auth/reset').send({ token, password });
 const login = (email, password) => api().post('/api/auth/login').send({ email, password });
 
 test('the whole flow: email arrives with a one-time link; the new password works and the old one does not', async () => {
-  const bob = await user('Bob');
+  const bob = await verified('Bob');
   const r = await forgot('BOB@x.com');
   assert.equal(r.status, 202);
   const mail = await nextMail();
@@ -54,7 +67,7 @@ test('the whole flow: email arrives with a one-time link; the new password works
 });
 
 test('an unknown email gets the same answer and no email (nobody can probe who has an account)', async () => {
-  await user('Bob');
+  await verified('Bob');
   const known = await forgot('bob@x.com');
   const unknown = await forgot('nobody@x.com');
   assert.equal(unknown.status, known.status);
@@ -65,7 +78,7 @@ test('an unknown email gets the same answer and no email (nobody can probe who h
 });
 
 test('resetting logs out every existing session', async () => {
-  await user('Bob');
+  await verified('Bob');
   const s = (await login('bob@x.com', 'password123')).body;
   await forgot('bob@x.com');
   await reset(linkIn(await nextMail()), 'brand new password');
@@ -73,7 +86,7 @@ test('resetting logs out every existing session', async () => {
 });
 
 test('only the newest link works; links expire; bad input is refused', async () => {
-  await user('Bob');
+  await verified('Bob');
   await forgot('bob@x.com'); const first = linkIn(await nextMail(1));
   await forgot('bob@x.com'); const second = linkIn(await nextMail(2));
   assert.equal((await reset(first, 'brand new password')).status, 400, 'an older link is cancelled by a newer one');
@@ -86,7 +99,7 @@ test('only the newest link works; links expire; bad input is refused', async () 
 });
 
 test('only the hash of the token is stored', async () => {
-  await user('Bob');
+  await verified('Bob');
   await forgot('bob@x.com');
   const token = linkIn(await nextMail());
   const rows = (await db.query('select token_hash from password_resets')).rows;
@@ -96,7 +109,7 @@ test('only the hash of the token is stored', async () => {
 });
 
 test('a suspended account gets no reset email', async () => {
-  const admin = await user('Admin', { admin: true }); const bob = await user('Bob');
+  const admin = await signedUp('Admin'); await db.query('update users set is_admin = true where id = $1', [admin.id]); const bob = await verified('Bob');
   await api().post(`/api/users/${bob.id}/ban`).set({ Authorization: `Bearer ${admin.token}` }).send({});
   assert.equal((await forgot('bob@x.com')).status, 202);
   await sleep(400);
@@ -107,7 +120,7 @@ test('without an email account configured, the app says so instead of pretending
   const saved = process.env.SMTP_URL;
   delete process.env.SMTP_URL;
   try {
-    await user('Bob');
+    await verified('Bob');
     const r = await forgot('bob@x.com');
     assert.equal(r.status, 503);
     assert.match(r.body.error, /not set up/);
@@ -115,4 +128,63 @@ test('without an email account configured, the app says so instead of pretending
     assert.deepEqual(status.body, { available: false });
   } finally { process.env.SMTP_URL = saved; }
   assert.deepEqual((await api().get('/api/auth/reset-available')).body, { available: true });
+});
+
+// ---------------- confirming the email address ----------------
+const me = (u) => api().get('/api/auth/me').set({ Authorization: `Bearer ${u.token}` });
+
+test('signing up sends a confirmation email; its link confirms the address once', async () => {
+  const kim = await user('Kim');
+  const mail = await nextMail();
+  assert.deepEqual(mail.to, ['kim@x.com']);
+  assert.match(mail.raw, /Subject: Confirm your email for Kim's Marbles/);
+  assert.equal((await me(kim)).body.email_verified, false);
+  const token = confirmLinkIn(mail);
+  assert.ok(token, 'the email contains a confirm link');
+  const r = await api().post('/api/auth/verify').send({ token });
+  assert.equal(r.status, 200);
+  assert.equal((await me(kim)).body.email_verified, true);
+  assert.equal((await api().post('/api/auth/verify').send({ token })).status, 400, 'a link works once');
+  assert.equal((await api().post('/api/auth/verify').send({ token: 'x'.repeat(43) })).status, 400);
+});
+
+test('login and refresh say whether the email is confirmed', async () => {
+  await signedUp('Kim');
+  const s = (await login('kim@x.com', 'password123')).body;
+  assert.equal(s.user.email_verified, false);
+});
+
+test('"send it again": a fresh link, and the older one stops working', async () => {
+  const kim = await user('Kim');
+  const first = confirmLinkIn(await nextMail(1));
+  const r = await api().post('/api/auth/verify/resend').set({ Authorization: `Bearer ${kim.token}` });
+  assert.equal(r.status, 202);
+  const second = confirmLinkIn(await nextMail(2));
+  assert.notEqual(first, second);
+  assert.equal((await api().post('/api/auth/verify').send({ token: first })).status, 400);
+  assert.equal((await api().post('/api/auth/verify').send({ token: second })).status, 200);
+  assert.equal((await api().post('/api/auth/verify/resend').set({ Authorization: `Bearer ${kim.token}` })).status, 409, 'already confirmed');
+  assert.equal((await api().post('/api/auth/verify/resend')).status, 401);
+});
+
+test('password reset emails only go to confirmed addresses (a typo at sign-up cannot hand over the account)', async () => {
+  await signedUp('Kim');
+  const r = await forgot('kim@x.com');
+  assert.equal(r.status, 202, 'the same neutral answer');
+  await sleep(400);
+  assert.equal(inbox.length, 0, 'no reset email to an unconfirmed address');
+});
+
+test('without email set up, sign-up still works and simply sends nothing', async () => {
+  const saved = process.env.SMTP_URL;
+  delete process.env.SMTP_URL;
+  try {
+    const r = await api().post('/api/auth/register').send({ handle: 'Quiet', email: 'quiet@x.com', password: 'password123' });
+    assert.equal(r.status, 201);
+    assert.equal(r.body.user.email_verified, false);
+    const kim = { token: r.body.accessToken };
+    assert.equal((await api().post('/api/auth/verify/resend').set({ Authorization: `Bearer ${kim.token}` })).status, 503);
+  } finally { process.env.SMTP_URL = saved; }
+  await sleep(300);
+  assert.equal(inbox.length, 0);
 });

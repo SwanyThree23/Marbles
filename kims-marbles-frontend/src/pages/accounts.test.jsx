@@ -133,3 +133,20 @@ describe('suspending from the queue', () => {
     confirm.mockRestore();
   });
 });
+
+describe('confirming an email', () => {
+  test('the link from the email confirms it (logged out works too), once', async () => {
+    routes['POST /api/auth/verify'] = () => ({ ok: true });
+    at('/verify/tok999');
+    expect(await screen.findByText('Email confirmed ✓')).toBeTruthy();
+    expect(calls).toEqual([{ method: 'POST', path: '/api/auth/verify', body: { token: 'tok999' } }]);
+  });
+
+  test('an old or used link says so and points to the Me page', async () => {
+    routes['POST /api/auth/verify'] = () => { throw Object.assign(new Error('This confirmation link is not valid or has expired'), { status: 400 }); };
+    auth = { isAuthed: true, user: { id: 'u1', handle: 'Kim' } };
+    at('/verify/old');
+    expect(await screen.findByText(/not valid or has expired/)).toBeTruthy();
+    expect(screen.getByText(/send a new link from your Me page/)).toBeTruthy();
+  });
+});

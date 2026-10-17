@@ -18,12 +18,43 @@ export default function Me() {
         </div>
       </div>
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+        <EmailCard />
         <Appearance />
         <Devices />
         <Moderation />
         <Payouts />
       </div>
     </section>
+  );
+}
+
+function EmailCard() {
+  const [me, setMe] = useState(null);
+  const [msg, setMsg] = useState(null);
+  const [err, setErr] = useState(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { apiFetch('/api/auth/me').then(setMe).catch((e) => setErr(e.message)); }, []);
+  async function resend() {
+    setBusy(true); setErr(null);
+    try { const r = await apiFetch('/api/auth/verify/resend', { method: 'POST' }); setMsg(r.message); } catch (e) { setErr(e.message); } finally { setBusy(false); }
+  }
+  return (
+    <div className="settings-card">
+      <h2 style={{ fontSize: 22 }}>Email</h2>
+      {!me ? <p className="muted">{err || 'Loading…'}</p> : (
+        <>
+          <p style={{ overflowWrap: 'anywhere' }}>{me.email} {me.email_verified ? <span className="tag">✓ Confirmed</span> : <span className="muted">· not confirmed yet</span>}</p>
+          {!me.email_verified && (
+            <>
+              <p className="muted">Confirm it so you can reset your password by email if you forget it.</p>
+              <button onClick={resend} disabled={busy || !!msg}>Send confirmation email</button>
+            </>
+          )}
+          {msg && <p role="status">{msg}</p>}
+          {err && <p className="error" role="alert">{err}</p>}
+        </>
+      )}
+    </div>
   );
 }
 

@@ -73,17 +73,30 @@ test('a moderator suspends someone from a report: their open page signs them out
   } finally { await cleanup(); }
 });
 
-test('forgot password: the email arrives over SMTP, the link sets a new password, the old one stops working', { ...T, skip: !process.env.E2E_SMTP }, async () => {
+const linkFrom = (mail, kind) => mail.raw.replace(/=\r?\n/g, '').match(new RegExp(`https?://[^\\s"<>]+/${kind}/[\\w-]{40,}`))[0];
+
+test('sign-up email confirmation, then forgot password: both emails arrive over SMTP and their links work', { ...T, skip: !process.env.E2E_SMTP }, async () => {
   try {
     const kim = await newUser('kim');
+    // 1. the sign-up confirmation email
+    await until(() => inbox.some((m) => m.to.includes(kim.email) && /\/verify\//.test(m.raw.replace(/=\r?\n/g, ''))), { what: 'the confirmation email' });
+    const confirm = linkFrom(inbox.find((m) => m.to.includes(kim.email)), 'verify');
+    const me = await openPage(kim); await me.goto(`${APP}/me`);
+    await me.getByText('· not confirmed yet').waitFor();
+    await me.goto(confirm);
+    await me.getByText('Email confirmed ✓').waitFor();
+    await me.getByRole('button', { name: 'Continue' }).click();
+    await me.getByText('✓ Confirmed').waitFor();
+    inbox.length = 0;
+
+    // 2. forgot password, logged out
     const page = await openAnon(); await page.goto(APP);
     await page.getByRole('button', { name: 'Forgot password?' }).click();
     await page.getByLabel('Email').fill(kim.email);
     await page.getByRole('button', { name: 'Send reset link' }).click();
     await page.getByText(/a reset link is on its way/).waitFor();
     await until(() => inbox.some((m) => m.to.includes(kim.email)), { what: 'the reset email' });
-    const mail = inbox.find((m) => m.to.includes(kim.email));
-    const link = mail.raw.replace(/=\r?\n/g, '').match(/https?:\/\/[^\s"<>]+\/reset\/[\w-]{40,}/)[0];
+    const link = linkFrom(inbox.find((m) => m.to.includes(kim.email)), 'reset');
     assert.ok(link.startsWith(APP), `the link points at the app: ${link}`);
 
     await page.goto(link);
