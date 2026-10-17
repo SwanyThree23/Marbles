@@ -16,6 +16,7 @@ const Messages = lazy(() => import('./pages/Messages'));
 const JoinInvite = lazy(() => import('./pages/JoinInvite'));
 const LiveByRoom = lazy(() => import('./pages/LiveByRoom'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const ModerationQueue = lazy(() => import('./pages/ModerationQueue'));
 
 export default function App() {
   return (
@@ -48,6 +49,7 @@ export function Gate() {
           <Route path="/join/:token" element={<JoinInvite />} />
           <Route path="/live/:roomId" element={<LiveByRoom />} />
           <Route path="/me" element={<Me />} />
+          <Route path="/moderation" element={<ModerationQueue />} />
           <Route path="*" element={<Navigate to="/market" replace />} />
         </Route>
       </Routes>

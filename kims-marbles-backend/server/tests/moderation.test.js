@@ -59,3 +59,13 @@ test('saving invalidates the per-room cache at once (no 10 s wait)', async () =>
   assert.equal(fresh.enabled, true);
   assert.deepEqual(fresh.words, ['scammer']);
 });
+
+test('acting on a report: an admin can remove any listing; other users still cannot', async () => {
+  const seller = await user('Seller'); const stranger = await user('Stranger'); const admin = await user('Admin', { admin: true });
+  const l = (await api().post('/api/listings').set(as(seller)).send({ name: 'Fake Lutz', category: 'Vintage', grade: 'mint', type: 'sale', priceCents: 900 })).body;
+  assert.equal((await api().delete(`/api/listings/${l.id}`).set(as(stranger))).status, 403);
+  assert.equal((await api().delete(`/api/listings/${l.id}`).set(as(admin))).status, 204);
+  assert.equal((await db.query('select status from listings where id = $1', [l.id])).rows[0].status, 'removed');
+  // admins can remove, but not edit someone else's listing
+  assert.equal((await api().patch(`/api/listings/${l.id}`).set(as(admin)).send({ status: 'active' })).status, 403);
+});

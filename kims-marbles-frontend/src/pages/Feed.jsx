@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
+import ReportButton from '../components/ReportButton';
 
 const ago = (iso) => {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
@@ -107,7 +108,8 @@ function Post({ p, mine, onLike, onDelete }) {
       <div className="row">
         <button aria-pressed={!!p.liked_by_me} onClick={onLike}>{p.liked_by_me ? '❤️' : '🤍'} {p.like_count}</button>
         <button aria-expanded={open} onClick={toggle}>💬 {count}</button>
-        {mine && <button className="link-btn" onClick={onDelete}>Delete</button>}
+        {mine ? <button className="link-btn" onClick={onDelete}>Delete</button>
+          : <ReportButton targetType="post" targetId={p.id} targetLabel={`${p.author_handle}: ${p.text}`} />}
       </div>
       {open && (
         <div className="stack" style={{ gap: 6 }}>

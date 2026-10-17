@@ -59,12 +59,12 @@ router.post('/', requireAuth, writeLimiter, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-async function ownListing(req, res) {
+async function ownListing(req, res, { adminMay = false } = {}) {
   if (!isUuid(req.params.id)) { res.status(404).json({ error: 'Listing not found' }); return null; }
   const r = await db.query('select * from listings where id = $1', [req.params.id]);
   const listing = r.rows[0];
   if (!listing) { res.status(404).json({ error: 'Listing not found' }); return null; }
-  if (listing.seller_id !== req.user.id) { res.status(403).json({ error: 'Only the seller can change this listing' }); return null; }
+  if (listing.seller_id !== req.user.id && !(adminMay && req.user.is_admin)) { res.status(403).json({ error: 'Only the seller can change this listing' }); return null; }
   return listing;
 }
 
@@ -80,10 +80,11 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// DELETE /api/listings/:id   seller only. Kept as "removed" so offers and payments keep their history.
+// DELETE /api/listings/:id   the seller, or an admin acting on a report. Kept as "removed" so
+// offers and payments keep their history.
 router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
-    const listing = await ownListing(req, res);
+    const listing = await ownListing(req, res, { adminMay: true });
     if (!listing) return;
     await db.query("update listings set status = 'removed' where id = $1", [listing.id]);
     res.status(204).end();

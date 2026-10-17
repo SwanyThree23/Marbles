@@ -12,6 +12,8 @@ import { createMediaClient } from '../lib/mediaClient';
 import { createCameraSwitcher, shouldMirror } from '../lib/cameraSwitch';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
+import ReportButton from '../components/ReportButton';
+import WatchParty from '../components/WatchParty';
 
 const REACTIONS = ['🔥', '❤️', '👏', '😮'];
 const TIP_AMOUNTS = [200, 500, 1000, 2000];
@@ -45,6 +47,7 @@ export default function LiveRoom({ room: initialRoom, onLeave }) {
   const [showFlags, setShowFlags] = useState(false);
   const [tipOpen, setTipOpen] = useState(false);
   const [inviteUrl, setInviteUrl] = useState(null);
+  const [wpOpen, setWpOpen] = useState(false);
   const mc = useRef(null);
   const switcher = useRef(null);
   const localRef = useRef(local);
@@ -306,6 +309,7 @@ export default function LiveRoom({ room: initialRoom, onLeave }) {
             🛡️ <span className="mono">{flags.length}</span>
           </button>
         )}
+        {!isHost && <ReportButton targetType="panel" targetId={room.id} targetLabel={`${room.title} (${room.host_handle})`} className="lr-btn">⚑</ReportButton>}
         <button className="lr-btn leave" onClick={leave}>{isHost ? 'End stream' : 'Leave'}</button>
       </div>
       {status === 'reconnecting' && <div role="status" className="lc-flag" style={{ margin: 8 }}>Connection lost. Reconnecting…</div>}
@@ -320,6 +324,7 @@ export default function LiveRoom({ room: initialRoom, onLeave }) {
           One-time invite link (valid 2 hours): <span className="mono">{inviteUrl}</span> <button className="link-btn" onClick={() => setInviteUrl(null)}>Hide</button>
         </div>
       )}
+      <WatchParty room={room} isHost={isHost} socket={socket} panelOpen={wpOpen} onClosePanel={() => setWpOpen(false)} />
       <div className="lr-body">
         <div className={`lr-stage${state.layout === 'spotlight' ? ' spotlight' : ''}`} data-layout={state.layout}>
           {tiles.length === 0 && <div className="empty-state" style={{ gridColumn: '1 / -1' }}>{status === 'connecting' ? 'Connecting…' : 'Nobody is on stage yet.'}</div>}
@@ -363,6 +368,7 @@ export default function LiveRoom({ room: initialRoom, onLeave }) {
           <button className={`lr-btn${local.screen ? ' off' : ''}`} title={local.screen ? 'Stop sharing your screen' : 'Share your screen'} onClick={toggleScreen}>🖥️</button>
         )}
         {REACTIONS.map((e) => <button key={e} className="lr-btn" title={`React ${e}`} onClick={() => react(e)}>{e}</button>)}
+        <button className="lr-btn" title="Watch party" aria-pressed={wpOpen} onClick={() => setWpOpen(!wpOpen)}>📺</button>
         {!isHost && <button className="lr-btn" title="Send a tip" onClick={() => setTipOpen(true)}>💰</button>}
         {isHost && (
           <>

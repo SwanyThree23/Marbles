@@ -9,7 +9,8 @@ const NAV = [
 ];
 
 export default function Layout() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const nav = user?.is_admin ? [...NAV, ['/moderation', '🛡️ Reports']] : NAV;
   const navigate = useNavigate();
   return (
     <>
@@ -24,7 +25,7 @@ export default function Layout() {
           <button className="logout-btn" onClick={logout}>Log Out</button>
         </div>
         <nav aria-label="Sections">
-          {NAV.map(([to, label]) => <NavLink key={to} to={to} className={({ isActive }) => (isActive ? 'active' : '')}>{label}</NavLink>)}
+          {nav.map(([to, label]) => <NavLink key={to} to={to} className={({ isActive }) => (isActive ? 'active' : '')}>{label}</NavLink>)}
         </nav>
       </header>
       <main className="page"><Outlet /></main>

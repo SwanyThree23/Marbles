@@ -4,7 +4,12 @@ import { useEffect, useRef } from 'react';
 
 export default function Modal({ title, onClose, children }) {
   const box = useRef(null);
+  // the latest onClose, so a parent re-rendering (a new onClose each time) never re-runs the
+  // mount logic below and steals focus from the field being typed in
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
+    const onClose = () => closeRef.current();
     const opener = document.activeElement;
     const focusables = () => [...box.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter((el) => !el.disabled);
     (focusables()[1] || focusables()[0])?.focus();
@@ -20,7 +25,7 @@ export default function Modal({ title, onClose, children }) {
     const node = box.current;
     node.addEventListener('keydown', onKey);
     return () => { node.removeEventListener('keydown', onKey); if (opener && opener.focus) opener.focus(); };
-  }, [onClose]);
+  }, []);
   return (
     <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, padding: 16 }}>

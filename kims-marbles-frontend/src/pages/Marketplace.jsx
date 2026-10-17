@@ -6,6 +6,8 @@ import { apiFetch } from '../lib/api';
 import { CATEGORIES, money, parsePriceToCents } from '../lib/learnData';
 import { useToast } from '../components/Toast';
 import Modal from '../components/Modal';
+import ReportButton from '../components/ReportButton';
+import { useAuth } from '../context/AuthContext';
 
 const TYPES = [['sale', 'For Sale'], ['trade', 'Trade Only'], ['auction', 'Auction']];
 const GRADES = [['mint', 'Mint'], ['near-mint', 'Near Mint'], ['good', 'Good']];
@@ -179,6 +181,7 @@ function ListingForm({ initial, onClose, onPublished }) {
 
 function DealRoom({ listing: l, onClose, onChanged }) {
   const toast = useToast();
+  const { user } = useAuth();
   const [amount, setAmount] = useState(l.type === 'auction' ? ((l.current_bid_cents + (l.current_bidder_id ? 500 : 0)) / 100).toFixed(2) : (l.price_cents / 100).toFixed(2));
   const [mine, setMine] = useState([]);
   const [picked, setPicked] = useState([]);
@@ -230,6 +233,7 @@ function DealRoom({ listing: l, onClose, onChanged }) {
           </>
         )}
         {err && <p className="error" role="alert">{err}</p>}
+        {l.seller_id !== user?.id && <ReportButton targetType="listing" targetId={l.id} targetLabel={`${l.name} (${l.seller_handle})`} />}
       </div>
     </Modal>
   );
