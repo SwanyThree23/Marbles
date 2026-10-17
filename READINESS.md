@@ -63,8 +63,10 @@ confirm a test fails.
   server refuses `REDIS_URL`. To grow, get a bigger VPS first.
 - **Backups stay on the same VPS.** Copy them off, or use Hostinger snapshots.
 - **No email.** There is no address verification and no password reset by email.
-- **Not in the UI yet:** watch party (YouTube sync) and reports/moderation queue screens.
-  The server supports them.
+- **Watch party** sends play/pause/restart to everyone, but it doesn't keep exact positions
+  in sync. Someone who joins mid-video starts it from the beginning. Tested with a stand-in
+  player; real YouTube playback still needs checking.
+- **Moderators** can remove reported listings and posts. There is no way to ban a person yet.
 - **Before real money:** the legal review and Stripe live activation. Live keys are refused
   until then.
 
